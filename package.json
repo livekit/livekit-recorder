@@ -1,0 +1,14 @@
+{
+  "name": "livekit-recording",
+  "version": "0.1.0",
+  "description": "livekit room recorder",
+  "main": "src/record.js",
+  "repository": "git@github.com:livekit/livekit-recording.git",
+  "author": "David Colburn <xero73@gmail.com>",
+  "license": "Apache 2.0",
+  "private": true,
+  "dependencies": {
+    "puppeteer": "^10.1.0",
+    "puppeteer-stream": "^2.0.5"
+  }
+}
