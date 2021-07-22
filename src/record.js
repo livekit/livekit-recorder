@@ -1,5 +1,5 @@
 const puppeteer = require('puppeteer');
-const { exec, spawn } = require("child_process");
+const { spawn } = require("child_process");
 
 (async () => {
 	const browser = await puppeteer.launch({
@@ -12,11 +12,11 @@ const { exec, spawn } = require("child_process");
 	await page.goto('https://example.livekit.io/#/room?url=wss%3A%2F%2Fdemo2.livekit.io&token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MjkzMjAyMDQsImlzcyI6IkFQSU1teGlMOHJxdUt6dFpFb1pKVjlGYiIsImp0aSI6InJyMSIsIm5iZiI6MTYyNjcyODIwNCwidmlkZW8iOnsiY2FuU3Vic2NyaWJlIjp0cnVlLCJoaWRkZW4iOnRydWUsInJvb20iOiJMS0hRIiwicm9vbUpvaW4iOnRydWV9fQ.pFg1z89kc47g5YL1bmkycRLl1NQQkHVDUxwnFUWlBBQ&videoEnabled=1&audioEnabled=1&simulcast=0');
 	const [muteAudio] = await page.$x("//button[contains(., 'Mute')]");
 	if (muteAudio) {
-    	await muteAudio.click();
+		await muteAudio.click();
 	}
 	const [muteVideo] = await page.$x("//button[contains(., 'Stop Video')]");
 	if (muteVideo) {
-    	await muteVideo.click();
+		await muteVideo.click();
 	}
 
 	console.log('Start recording');
@@ -28,7 +28,7 @@ const { exec, spawn } = require("child_process");
 		'-t', '15',
 		'recording.mp4'])
 	ffmpeg.stdout.pipe(process.stdout);
-    ffmpeg.stderr.pipe(process.stderr);
+	ffmpeg.stderr.pipe(process.stderr);
 	ffmpeg.on('error', (err) => console.log(err));
 	ffmpeg.on('close', () => {
 		console.log('Closed')
