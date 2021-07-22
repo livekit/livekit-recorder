@@ -21,10 +21,15 @@ const { spawn } = require("child_process");
 
 	console.log('Start recording');
 	const ffmpeg = spawn('ffmpeg',  [
+		// generate DTS
+		'-fflags', '+igndts',
+		// video options
 		'-video_size', '1920x1080', '-framerate', '25',
-		'-f', 'x11grab', '-thread_queue_size', '1024', '-i', ':10.0', 
-		// '-vcodec', 'libx264', '-preset', 'ultrafast', '-tune', 'zerolatency',
+		// x11 grab
+		'-f', 'x11grab', '-thread_queue_size', '1024', '-i', ':10.0', // '-vcodec', 'libx264', '-preset', 'ultrafast', '-tune', 'zerolatency',
+		// pulse grab
 		'-f', 'pulse', '-thread_queue_size', '1024', '-i', 'grab.monitor', '-ac', '2',
+		// 15 seconds
 		'-t', '15',
 		'recording.mp4'])
 	ffmpeg.stdout.pipe(process.stdout);
