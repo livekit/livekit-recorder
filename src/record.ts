@@ -1,6 +1,9 @@
 import { loadConfig } from "./config"
 import { Browser, Page, launch } from 'puppeteer'
 import { spawn } from 'child_process'
+import { S3 } from 'aws-sdk'
+import { readFileSync } from 'fs'
+
 const Xvfb = require('xvfb');
 
 function buildRecorderToken(key: string, secret: string): string {
@@ -34,13 +37,13 @@ function buildRecorderToken(key: string, secret: string): string {
 	// load room
 	const page: Page = await browser.newPage()
 	let url: string
-	if (conf.Template) {
-		const token = buildRecorderToken(conf.Template.ApiKey, conf.Template.ApiSecret)
-		url = `https://recorder.livekit.io/${conf.Template.Type}?url=${encodeURIComponent(conf.Template.WSUrl)}&token=${token}`
-	} else if (conf.Url) {
-		url = conf.Url
+	if (conf.Input.Template) {
+		const token = buildRecorderToken(conf.Input.Template.ApiKey, conf.Input.Template.ApiSecret)
+		url = `https://recorder.livekit.io/${conf.Input.Template.Type}?url=${encodeURIComponent(conf.Input.Template.WSUrl)}&token=${token}`
+	} else if (conf.Input.Url) {
+		url = conf.Input.Url
 	} else {
-		throw Error('url or template required')
+		throw Error('Input url or template required')
 	}
 	await page.goto(url)
 
@@ -50,7 +53,7 @@ function buildRecorderToken(key: string, secret: string): string {
 		await muteAudio.click()
 	}
 
-	// prepare ffmpeg output
+	// ffmpeg output options
 	let ffmpegOutputOpts = [
 		// audio
 		'-c:a', 'aac', '-b:a', conf.Output.AudioBitrate, '-ar', conf.Output.AudioFrequency,
@@ -63,19 +66,34 @@ function buildRecorderToken(key: string, secret: string): string {
 		ffmpegOutputOpts = ffmpegOutputOpts.concat('-s', `${conf.Output.Width}x${conf.Output.Height}`)
 	}
 
+	// ffmpeg output location
 	let ffmpegOutput: string[]
 	let uploadFunc: () => void
-	if (conf.Output.Location.startsWith('rtmp')) {
+	if (conf.Output.File) {
+		ffmpegOutput = [conf.Output.File]
+	} else if (conf.Output.RTMP) {
 		ffmpegOutputOpts = ffmpegOutputOpts.concat(['-maxrate', conf.Output.VideoBitrate, '-bufsize', conf.Output.VideoBuffer])
-		ffmpegOutput = ['-f', 'flv', conf.Output.Location]
-	} else if (conf.Output.Location.startsWith('s3://')) {
-		const filename = 'recording.mp4'
+		ffmpegOutput = ['-f', 'flv', conf.Output.RTMP]
+	} else if (conf.Output.S3) {
+		const filename = conf.Output.S3?.Key || 'recording.mp4'
 		ffmpegOutput = [filename]
 		uploadFunc = function() {
-			// TODO: upload to s3
+			const s3 = new S3({accessKeyId: conf.Output.S3?.AccessID, secretAccessKey: conf.Output.S3?.Secret})
+			const params = {
+				Bucket: conf.Output.S3?.Bucket || '',
+				Key: filename,
+				Body: readFileSync(filename)
+			}
+			s3.upload(params, undefined,function(err, data) {
+				if (err) {
+					console.log(err)
+				} else {
+					console.log(`file uploaded to ${data.Location}`)
+				}
+			})
 		}
 	} else {
-		ffmpegOutput = [conf.Output.Location]
+		throw Error('Output location required')
 	}
 
 	// spawn ffmpeg

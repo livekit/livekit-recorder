@@ -25,30 +25,40 @@ LIVEKIT_URL = <custom recording webpage url>
 
 ### Using json config file
 
-Either Template or Url required - all other fields optional.
+Input: Either Url or Template required.  
+Output: Either File, RTMP, or S3 required.  
+All other fields optional.
+
 ```
 LIVEKIT_RECORDING_CONFIG = "${jq -Rs '.' config.json}"
 ```
 config.json:
 ```yaml
-{
-    "Template": {
-        "Type": grid | gallery | speaker
-        "WSUrl": livekit server websocket url
-        "ApiKey": livekit server api key
-        "ApiSecret": livekit server api secret
-    }
-    "Url": custom url of recording web page
+{   
     "Input": {
+        "Url": custom url of recording web page
+        "Template": {
+            "Type": grid | gallery | speaker
+            "WSUrl": livekit server websocket url
+            "ApiKey": livekit server api key
+            "ApiSecret": livekit server api secret
+        }
         "Width": defaults to 1920
         "Height": defaults to 1080
         "Depth": defaults to 24
         "Framerate": defaults to 25
     }
     "Output": {
-        "Location": output stream url or filename, defaults to recording.mp4
-        "Width": optional, scales output
-        "Height": optional, scales output
+        "File": filename
+        "RTMP": rtmp url
+        "S3": {
+            "AccessID": aws access id
+            "Secret": aws secret
+            "Bucket": s3 bucket
+            "Key": filename
+        }
+        "Width": optional, scale output width
+        "Height": optional, scale output height
         "AudioBitrate": defaults to 128k
         "AudioFrequency": defaults to 44100
         "VideoBitrate": defaults to 1872k
@@ -76,30 +86,47 @@ docker cp <container_name>:app/recording.mp4 .
 
 ### Record on custom webpage and upload to s3
 
-```bash
-docker build -t recorder \
-&& docker run \
-    -e LIVEKIT_URL="https://your-domain.com/record" \
-    -e LIVEKIT_OUTPUT="s3://bucket/path" \
-    recorder
+s3.json
+```json
+{
+    "Input": {
+        "Url": "https://your-recording-domain.com"
+    },
+    "Output": {
+        "S3": {
+            "AccessID": "<aws-access-id>",
+            "Secret": "<aws-secret>",
+            "Bucket": "bucket-name",
+            "Key": "recording.mp4"
+        }
+    }
+}
 ```
 
-### Stream to twitch
+```bash
+docker build -t recorder \
+&& docker run -e LIVEKIT_RECORDING_CONFIG="${jq -Rs '.' s3.json}" recorder
+```
+
+### Streaming to twitch, scaled to 720p
 
 twitch.json
 ```json
 {
-    "Url": "https://record.livekit.io/speaker",
-    "WSUrl": "wss://your-domain.com",
-    "Token": "<token>",
     "Input": {
+        "Template": {
+            "Type": "speaker",
+            "WSUrl": "wss://your-domain.com",
+            "ApiKey": "<api-key>",
+            "ApiSecret": "<api-secret>"
+        },
         "Width": 1920,
         "Height": 1080,
         "Depth": 24,
-        "Framerate": 25,
+        "Framerate": 25
     },
     "Output": {
-        "Location": "rtmp://live.twitch.tv/app/<stream key>",
+        "RTMP": "rtmp://live.twitch.tv/app/<stream key>",
         "Width": 1280,
         "Height": 720
     }
