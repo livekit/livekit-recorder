@@ -70,7 +70,8 @@ function loadConfig(): Config {
 			'--kiosk', // full screen, no info bar
 			'--no-sandbox', // required when running as root
 			`--window-size=${conf.Input.Width},${conf.Input.Height}`,
-			`--display=${xvfb.display()}`]
+			`--display=${xvfb.display()}`,
+		]
 	})
 
 	// load room
