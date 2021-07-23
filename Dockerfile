@@ -13,10 +13,12 @@ RUN apt-get install -y xvfb
 RUN apt-get install -y ffmpeg
 
 # copy recorder
-COPY package.json package-lock.json tsconfig.json home/node
-COPY src home/node/src
+WORKDIR /app
+COPY package.json package-lock.json tsconfig.json .
+COPY src ./src
 RUN npm install \
-    && npm install -g typescript ts-node
+    && npm install typescript \
+    && npm install -g ts-node
 
 COPY entrypoint.sh .
 ENTRYPOINT ./entrypoint.sh 

@@ -12,4 +12,4 @@ pactl load-module module-null-sink sink_name="grab" sink_properties=device.descr
 
 # Start xvfb
 export DISPLAY=:10
-Xvfb :10 -ac -screen 0 1920x1080x16 & ts-node home/node/src/record.ts
+Xvfb :10 -ac -screen 0 1920x1080x16 & ts-node src/record.ts
