@@ -1,5 +1,5 @@
-import { Browser, Page, launch } from 'puppeteer';
-import { spawn } from 'child_process';
+import { Browser, Page, launch } from 'puppeteer'
+import { spawn } from 'child_process'
 
 (async () => {
 	// launch puppeteer
