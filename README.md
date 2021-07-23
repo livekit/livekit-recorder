@@ -1,5 +1,42 @@
 # livekit-recording
 
+## Config
+
+* Using env vars
+```
+LIVEKIT_URL: (required) base url of recording web page
+LIVEKIT_WS_URL: (required) livekit server websocket url
+LIVEKIT_TOKEN: (required) recorder room token
+LIVEKIT_OUTPUT: output stream url or filename, defaults to recording.mp4
+```
+
+* Using config file
+
+config.json:
+```
+	Url: (required) base url of recording web page
+	WSUrl: (required) livekit server websocket url
+	Token: (required) recorder room token
+	Input: {
+		Width: defaults to 1920
+		Height: defaults to 1080
+		Depth: defaults to 24
+		Framerate: defaults to 25
+	}
+	Output: {
+		Location: (required) output url, can be a file name
+		Width?: optional, scales output
+		Height?: optional, scales output
+		AudioBitrate: defaults to 128k
+		AudioFrequency: defaults to 44100
+		VideoBitrate: defaults to 1872k
+		VideoBuffer: defaults to 3744k
+	}
+```
+```
+LIVEKIT_RECORDING_CONFIG="${jq -Rs '.' conf.json}"
+```
+
 ## Examples
 
 ### Basic
