@@ -1,26 +1,10 @@
 {
-  "name": "livekit-recording",
-  "version": "1.0.0",
-  "description": "livekit room recorder",
-  "main": "src/record.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^4.28.4",
+    "@typescript-eslint/parser": "^4.28.4",
+    "eslint": "^7.31.0"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/livekit/livekit-recording.git"
-  },
-  "keywords": [
-    "livekit",
-    "record"
-  ],
-  "author": "David Colburn",
-  "license": "Apache-2.0",
-  "bugs": {
-    "url": "https://github.com/livekit/livekit-recording/issues"
-  },
-  "homepage": "https://github.com/livekit/livekit-recording#readme",
   "dependencies": {
-    "puppeteer": "^10.1.0"
+    "@types/puppeteer": "^5.4.4"
   }
 }

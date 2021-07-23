@@ -15,7 +15,8 @@ RUN apt-get install -y ffmpeg
 # copy recorder
 COPY package.json home/node
 COPY src home/node/src
-RUN npm install
+RUN npm install \
+    && npm install -g typescript ts-node
 
 COPY entrypoint.sh .
 ENTRYPOINT ./entrypoint.sh 
