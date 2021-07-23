@@ -1,13 +1,30 @@
 import { Browser, Page, launch } from 'puppeteer'
 import { spawn } from 'child_process'
+// const Xvfb = require("xvfb")
 
 (async () => {
+	// var config: {}
+	// const confString = process.env.LIVEKIT_RECORDING_CONFIG
+
+	// JSON.parse(confString)
+
+	// const xvfb = new Xvfb.Xvfb({
+	// 	displayNum: 10,
+	// 	silent: true,
+	// 	xvfb_args: ['-screen', '0', '1920x1080x24', '-ac']
+	// })
+	// xvfb.start((err: Error) => {
+	// 	if (err) {
+	// 		console.log(err)
+	// 	}
+	// })
+
 	// launch puppeteer
 	const browser: Browser = await launch({
 		headless: false,
 		defaultViewport: {width: 1920, height: 1080},
 		ignoreDefaultArgs: ["--enable-automation"],
-		args: ['--kiosk', '--no-sandbox', '--window-size=1920,1080']
+		args: ['--kiosk', '--no-sandbox', '--window-size=1920,1080']//, '--display='+xvfb.display()]
 	})
 	const page: Page = await browser.newPage()
 	await page.goto('https://example.livekit.io/#/room?url=wss%3A%2F%2Fdemo2.livekit.io&token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MjkzMjAyMDQsImlzcyI6IkFQSU1teGlMOHJxdUt6dFpFb1pKVjlGYiIsImp0aSI6InJyMSIsIm5iZiI6MTYyNjcyODIwNCwidmlkZW8iOnsiY2FuU3Vic2NyaWJlIjp0cnVlLCJoaWRkZW4iOnRydWUsInJvb20iOiJMS0hRIiwicm9vbUpvaW4iOnRydWV9fQ.pFg1z89kc47g5YL1bmkycRLl1NQQkHVDUxwnFUWlBBQ&videoEnabled=1&audioEnabled=1&simulcast=0');
@@ -41,14 +58,22 @@ import { spawn } from 'child_process'
 	ffmpeg.stderr.pipe(process.stderr)
 	ffmpeg.on('error', (err) => console.log(err))
 	ffmpeg.on('close', () => {
-		console.log('Closed')
+		console.log('ffmpeg finished')
 	});
-	
+
 	// stop recording
 	setTimeout(async () => {
 		console.log('Closing')
 		ffmpeg.kill('SIGINT')
 		await browser.close()
+		// xvfb.stop()
 	}, 1000 * 30);
 
+	// page.on('console', async (msg) => {
+	// 	if (msg.text() === 'END_RECORDING') {
+	// 		console.log('End recording')
+	// 		ffmpeg.kill('SIGINT')
+	// 		await browser.close()
+	// 	}
+	// })
 })();
