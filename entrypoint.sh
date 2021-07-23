@@ -10,6 +10,5 @@ pulseaudio -D --verbose --exit-idle-time=-1 --system --disallow-exit
 # Load audio sink
 pactl load-module module-null-sink sink_name="grab" sink_properties=device.description="monitorOUT"
 
-# Start xvfb
-export DISPLAY=:10
-Xvfb :10 -ac -screen 0 1920x1080x16 & ts-node src/record.ts
+# Run
+ts-node src/record.ts
