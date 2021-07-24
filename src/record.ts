@@ -66,12 +66,6 @@ function buildRecorderToken(room: string, key: string, secret: string): string {
 	}
 	await page.goto(url)
 
-	// For testing
-	const [muteAudio] = await page.$x("//button[contains(., 'Mute')]")
-	if (muteAudio) {
-		await muteAudio.click()
-	}
-
 	// ffmpeg output options
 	let ffmpegOutputOpts = [
 		// audio
