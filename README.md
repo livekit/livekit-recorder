@@ -2,9 +2,11 @@
 
 ## What it does
 
-The recorder grabs audio from pulse and video from a virtual frame buffer, and feeds them into ffmpeg.  
-You can write the output as mp4 to a file or upload it to s3, or forward the output to a rtmp stream.  
-If you don't supply any output options, it will write to `/app/recording.mp4`  
+The recorder launches Chrome and navigates to the supplied url, grabs audio from pulse and video from a virtual frame
+buffer, and feeds them into ffmpeg. You can write the output as mp4 to a file or upload it to s3, or forward the
+output to a rtmp stream. If you don't supply any output options, it will write to `/app/recording.mp4`
+
+This does not need to be used with livekit streaming - you can use this to save or stream any website.
 
 The config should be passed to docker through the `LIVEKIT_RECORDING_CONFIG` env var.
 
@@ -30,7 +32,7 @@ We have 3 templates available - grid, gallery, and speaker. Just supply your ser
 
 ### Using a custom webpage
 
-You can also use your own custom recoding webpages - just supply the url.
+You can also save or stream any other webpage - just supply the url.
 ```json
 {   
     "input": {
