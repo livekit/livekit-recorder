@@ -30,7 +30,7 @@ Output: Either File, RTMP, or S3 required.
 All other fields optional.
 
 ```
-LIVEKIT_RECORDING_CONFIG = "${jq -Rs '.' config.json}"
+LIVEKIT_RECORDING_CONFIG = "$(jq -Rs '.' config.json)"
 ```
 config.json:
 ```yaml
@@ -72,13 +72,13 @@ config.json:
 ### Basic
 
 ```bash
-docker build -t recorder \
+docker build -t livekit-recorder . \
 && docker run \
     -e LIVEKIT_TEMPLATE="grid" \
     -e LIVEKIT_WS_URL="wss://your-domain.com" \
     -e LIVEKIT_API_KEY="<key>" \
     -e LIVEKIT_API_SECRET="<secret>" \
-    recorder
+    livekit-recorder
 
 // copy file to host after completion
 docker cp <container_name>:app/recording.mp4 .
@@ -104,8 +104,8 @@ s3.json
 ```
 
 ```bash
-docker build -t recorder \
-&& docker run -e LIVEKIT_RECORDING_CONFIG="${jq -Rs '.' s3.json}" recorder
+docker build -t livekit-recorder . \
+&& docker run -e LIVEKIT_RECORDING_CONFIG="$(jq -Rs '.' s3.json)" livekit-recorder
 ```
 
 ### Streaming to twitch, scaled to 720p
@@ -121,9 +121,7 @@ twitch.json
             "ApiSecret": "<api-secret>"
         },
         "Width": 1920,
-        "Height": 1080,
-        "Depth": 24,
-        "Framerate": 25
+        "Height": 1080
     },
     "Output": {
         "RTMP": "rtmp://live.twitch.tv/app/<stream key>",
@@ -134,6 +132,6 @@ twitch.json
 ```
 
 ```bash
-docker build -t recorder \
-&& docker run -e LIVEKIT_RECORDING_CONFIG="${jq -Rs '.' twitch.json}" recorder
+docker build -t livekit-recorder . \
+&& docker run -e LIVEKIT_RECORDING_CONFIG="$(jq -Rs '.' twitch.json)" livekit-recorder
 ```
