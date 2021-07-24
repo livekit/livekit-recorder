@@ -1,74 +1,65 @@
 type Config = {
-    Input: {
-        Url?: string
-        Template?: {
-            Type: string
-            WSUrl: string
-            ApiKey: string
-            ApiSecret: string
+    input: {
+        url?: string
+        template?: {
+            type: string
+            wsUrl: string
+            token?: string
+            roomName?: string
+            apiKey?: string
+            apiSecret?: string
         }
-        Width: number
-        Height: number
-        Depth: number
-        Framerate: number
+        width: number
+        height: number
+        depth: number
+        framerate: number
     }
-    Output: {
-        File?: string
-        RTMP?: string
-        S3?: {
-            AccessKey: string
-            Secret: string
-            Bucket: string
-            Path: string
+    output: {
+        file?: string
+        rtmp?: string
+        s3?: {
+            accessKey: string
+            secret: string
+            bucket: string
+            path: string
         }
-        Width?: number
-        Height?: number
-        AudioBitrate: string
-        AudioFrequency: string
-        VideoBitrate: string
-        VideoBuffer: string
+        width?: number
+        height?: number
+        audioBitrate: string
+        audioFrequency: string
+        videoBitrate: string
+        videoBuffer: string
     }
 }
 
 export function loadConfig(): Config {
     const conf: Config = {
-        Input: {
-            Width: 1920,
-            Height: 1080,
-            Depth: 24,
-            Framerate: 25,
+        input: {
+            width: 1920,
+            height: 1080,
+            depth: 24,
+            framerate: 25,
         },
-        Output: {
-            AudioBitrate: '128k',
-            AudioFrequency: '44100',
-            VideoBitrate: '2976k',
-            VideoBuffer: '5952k'
+        output: {
+            audioBitrate: '128k',
+            audioFrequency: '44100',
+            videoBitrate: '2976k',
+            videoBuffer: '5952k'
         }
     }
 
     if (process.env.LIVEKIT_RECORDING_CONFIG) {
         // load config from env
         const json = JSON.parse(process.env.LIVEKIT_RECORDING_CONFIG)
-        conf.Input = {...conf.Input, ...json.Input}
-        conf.Output = {...conf.Output, ...json.Output}
-    } else if (process.env.LIVEKIT_URL) {
-        // set url from env
-        conf.Input.Url = process.env.LIVEKIT_URL
-    } else if (process.env.LIVEKIT_WS_URL && process.env.LIVEKIT_API_KEY && process.env.LIVEKIT_API_SECRET) {
-        // set template from env
-        conf.Input.Template = {
-            Type: process.env.LIVEKIT_TEMPLATE || 'gallery',
-            WSUrl: process.env.LIVEKIT_WS_URL,
-            ApiKey: process.env.LIVEKIT_API_KEY,
-            ApiSecret: process.env.LIVEKIT_API_SECRET,
-        }
+        conf.input = {...conf.input, ...json.input}
+        conf.output = {...conf.output, ...json.output}
     } else {
         throw Error('LIVEKIT_RECORDING_CONFIG, LIVEKIT_URL or Template required')
     }
 
     // write to file if no output specified
-    if (!(conf.Output.File || conf.Output.RTMP || conf.Output.S3)) {
-        conf.Output.File = 'recording.mp4'
+    if (!(conf.output.file || conf.output.rtmp || conf.output.s3)) {
+        conf.output.file = 'recording.mp4'
     }
 
     return conf

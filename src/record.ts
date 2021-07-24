@@ -3,11 +3,22 @@ import { Browser, Page, launch } from 'puppeteer'
 import { spawn } from 'child_process'
 import { S3 } from 'aws-sdk'
 import { readFileSync } from 'fs'
+import { AccessToken } from 'livekit-server-sdk'
 
 const Xvfb = require('xvfb');
 
-function buildRecorderToken(key: string, secret: string): string {
-	return key+secret // TODO
+function buildRecorderToken(room: string, key: string, secret: string): string {
+	const at = new AccessToken(key, secret, {
+		identity: 'livekit-recorder',
+	})
+	at.addGrant({
+		roomJoin: true,
+		room: room,
+		canPublish: false,
+		canSubscribe: true,
+		hidden: true,
+	})
+	return at.toJwt()
 }
 
 (async () => {
@@ -17,19 +28,19 @@ function buildRecorderToken(key: string, secret: string): string {
 	const xvfb = new Xvfb({
 		displayNum: 10,
 		silent: true,
-		xvfb_args: ['-screen', '0', `${conf.Input.Width}x${conf.Input.Height}x${conf.Input.Depth}`, '-ac']
+		xvfb_args: ['-screen', '0', `${conf.input.width}x${conf.input.height}x${conf.input.depth}`, '-ac']
 	})
 	xvfb.start((err: Error) => { if (err) { console.log(err) } })
 
 	// launch puppeteer
 	const browser: Browser = await launch({
 		headless: false,
-		defaultViewport: {width: conf.Input.Width, height: conf.Input.Height},
+		defaultViewport: {width: conf.input.width, height: conf.input.height},
 		ignoreDefaultArgs: ["--enable-automation"],
 		args: [
 			'--kiosk', // full screen, no info bar
 			'--no-sandbox', // required when running as root
-			`--window-size=${conf.Input.Width},${conf.Input.Height}`,
+			`--window-size=${conf.input.width},${conf.input.height}`,
 			`--display=${xvfb.display()}`,
 		]
 	})
@@ -37,11 +48,19 @@ function buildRecorderToken(key: string, secret: string): string {
 	// load room
 	const page: Page = await browser.newPage()
 	let url: string
-	if (conf.Input.Template) {
-		const token = buildRecorderToken(conf.Input.Template.ApiKey, conf.Input.Template.ApiSecret)
-		url = `https://recorder.livekit.io/${conf.Input.Template.Type}?url=${encodeURIComponent(conf.Input.Template.WSUrl)}&token=${token}`
-	} else if (conf.Input.Url) {
-		url = conf.Input.Url
+	const template = conf.input.template
+	if (template) {
+		let token: string
+		if (template.token) {
+			token = template.token
+		} else if (template.roomName && template.apiKey && template.apiSecret) {
+			token = buildRecorderToken(template.roomName, template.apiKey, template.apiSecret)
+		} else {
+			throw Error('Either token, or room name, api key, and secret required')
+		}
+		url = `https://recorder.livekit.io/${template.type}?url=${encodeURIComponent(template.wsUrl)}&token=${token}`
+	} else if (conf.input.url) {
+		url = conf.input.url
 	} else {
 		throw Error('Input url or template required')
 	}
@@ -56,34 +75,34 @@ function buildRecorderToken(key: string, secret: string): string {
 	// ffmpeg output options
 	let ffmpegOutputOpts = [
 		// audio
-		'-c:a', 'aac', '-b:a', conf.Output.AudioBitrate, '-ar', conf.Output.AudioFrequency,
+		'-c:a', 'aac', '-b:a', conf.output.audioBitrate, '-ar', conf.output.audioFrequency,
 		'-ac', '2', '-af', 'aresample=async=1',
 		// video
 		'-c:v', 'libx264', '-preset', 'veryfast', '-tune', 'zerolatency',
-		'-b:v', conf.Output.VideoBitrate,
+		'-b:v', conf.output.videoBitrate,
 	]
-	if (conf.Output.Width && conf.Output.Height) {
-		ffmpegOutputOpts = ffmpegOutputOpts.concat('-s', `${conf.Output.Width}x${conf.Output.Height}`)
+	if (conf.output.width && conf.output.height) {
+		ffmpegOutputOpts = ffmpegOutputOpts.concat('-s', `${conf.output.width}x${conf.output.height}`)
 	}
 
 	// ffmpeg output location
 	let ffmpegOutput: string[]
 	let uploadFunc: () => void
-	if (conf.Output.File) {
-		ffmpegOutput = [conf.Output.File]
-	} else if (conf.Output.RTMP) {
-		ffmpegOutputOpts = ffmpegOutputOpts.concat(['-maxrate', conf.Output.VideoBitrate, '-bufsize', conf.Output.VideoBuffer])
-		ffmpegOutput = ['-f', 'flv', conf.Output.RTMP]
-	} else if (conf.Output.S3) {
+	if (conf.output.file) {
+		ffmpegOutput = [conf.output.file]
+	} else if (conf.output.rtmp) {
+		ffmpegOutputOpts = ffmpegOutputOpts.concat(['-maxrate', conf.output.videoBitrate, '-bufsize', conf.output.videoBuffer])
+		ffmpegOutput = ['-f', 'flv', conf.output.rtmp]
+	} else if (conf.output.s3) {
 		const filename = 'recording.mp4'
 
 		ffmpegOutput = [filename]
 		uploadFunc = function() {
-			if (conf.Output.S3) {
-				const s3 = new S3({accessKeyId: conf.Output.S3.AccessKey, secretAccessKey: conf.Output.S3.Secret})
+			if (conf.output.s3) {
+				const s3 = new S3({accessKeyId: conf.output.s3.accessKey, secretAccessKey: conf.output.s3.secret})
 				const params = {
-					Bucket: conf.Output.S3.Bucket,
-					Key: conf.Output.S3.Path,
+					Bucket: conf.output.s3.bucket,
+					Key: conf.output.s3.path,
 					Body: readFileSync(filename)
 				}
 				s3.upload(params, undefined,function(err, data) {
@@ -110,8 +129,8 @@ function buildRecorderToken(key: string, secret: string): string {
 		'-thread_queue_size', '1024', // avoid thread message queue blocking
 		'-probesize', '42M', // increase probe size for bitrate estimation
 		// consider probesize 32 analyzeduration 0 for lower latency
-		'-s', `${conf.Input.Width}x${conf.Input.Height}`,
-		'-r', `${conf.Input.Framerate}`,
+		'-s', `${conf.input.width}x${conf.input.height}`,
+		'-r', `${conf.input.framerate}`,
 		'-f', 'x11grab', '-i', `${xvfb.display()}.0`,
 
 		// audio (pulse grab)
