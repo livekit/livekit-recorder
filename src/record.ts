@@ -75,7 +75,7 @@ function buildRecorderToken(key: string, secret: string): string {
 		ffmpegOutputOpts = ffmpegOutputOpts.concat(['-maxrate', conf.Output.VideoBitrate, '-bufsize', conf.Output.VideoBuffer])
 		ffmpegOutput = ['-f', 'flv', conf.Output.RTMP]
 	} else if (conf.Output.S3) {
-		const filename = conf.Output.S3?.Key || 'recording.mp4'
+		const filename = conf.Output.S3.Key
 		ffmpegOutput = [filename]
 		uploadFunc = function() {
 			const s3 = new S3({accessKeyId: conf.Output.S3?.AccessID, secretAccessKey: conf.Output.S3?.Secret})
@@ -135,4 +135,6 @@ function buildRecorderToken(key: string, secret: string): string {
 			await browser.close()
 		}
 	})
-})();
+})().catch((err) => {
+	console.log(err)
+});

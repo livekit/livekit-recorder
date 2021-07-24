@@ -19,7 +19,7 @@ type Config = {
             AccessID: string
             Secret: string
             Bucket: string
-            Key?: string
+            Key: string
         }
         Width?: number
         Height?: number
@@ -31,7 +31,7 @@ type Config = {
 }
 
 export function loadConfig(): Config {
-    let conf: Config = {
+    const conf: Config = {
         Input: {
             Width: 1920,
             Height: 1080,
@@ -48,7 +48,9 @@ export function loadConfig(): Config {
 
     if (process.env.LIVEKIT_RECORDING_CONFIG) {
         // load config from env
-        conf = {...conf, ...JSON.parse(process.env.LIVEKIT_RECORDING_CONFIG)}
+        const json = JSON.parse(process.env.LIVEKIT_RECORDING_CONFIG)
+        conf.Input = {...conf.Input, ...json.Input}
+        conf.Output = {...conf.Output, ...json.Output}
     } else if (process.env.LIVEKIT_URL) {
         // set url from env
         conf.Input.Url = process.env.LIVEKIT_URL
@@ -61,8 +63,7 @@ export function loadConfig(): Config {
             ApiSecret: process.env.LIVEKIT_API_SECRET,
         }
     } else {
-        // TODO: throw Error('LIVEKIT_RECORDING_CONFIG, LIVEKIT_URL or Template required')
-        conf.Input.Url = "https://example.livekit.io/#/room?url=wss%3A%2F%2Fdemo2.livekit.io&token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MjkzMjAyMDQsImlzcyI6IkFQSU1teGlMOHJxdUt6dFpFb1pKVjlGYiIsImp0aSI6InJyMSIsIm5iZiI6MTYyNjcyODIwNCwidmlkZW8iOnsiY2FuU3Vic2NyaWJlIjp0cnVlLCJoaWRkZW4iOnRydWUsInJvb20iOiJMS0hRIiwicm9vbUpvaW4iOnRydWV9fQ.pFg1z89kc47g5YL1bmkycRLl1NQQkHVDUxwnFUWlBBQ&videoEnabled=0&audioEnabled=1&simulcast=0&recorder=1"
+        throw Error('LIVEKIT_RECORDING_CONFIG, LIVEKIT_URL or Template required')
     }
 
     // write to file if no output specified
