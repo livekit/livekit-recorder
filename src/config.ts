@@ -16,10 +16,10 @@ type Config = {
         File?: string
         RTMP?: string
         S3?: {
-            AccessID: string
+            AccessKey: string
             Secret: string
             Bucket: string
-            Key: string
+            Path: string
         }
         Width?: number
         Height?: number

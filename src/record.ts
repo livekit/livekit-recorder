@@ -75,22 +75,25 @@ function buildRecorderToken(key: string, secret: string): string {
 		ffmpegOutputOpts = ffmpegOutputOpts.concat(['-maxrate', conf.Output.VideoBitrate, '-bufsize', conf.Output.VideoBuffer])
 		ffmpegOutput = ['-f', 'flv', conf.Output.RTMP]
 	} else if (conf.Output.S3) {
-		const filename = conf.Output.S3.Key
+		const filename = 'recording.mp4'
+
 		ffmpegOutput = [filename]
 		uploadFunc = function() {
-			const s3 = new S3({accessKeyId: conf.Output.S3?.AccessID, secretAccessKey: conf.Output.S3?.Secret})
-			const params = {
-				Bucket: conf.Output.S3?.Bucket || '',
-				Key: filename,
-				Body: readFileSync(filename)
-			}
-			s3.upload(params, undefined,function(err, data) {
-				if (err) {
-					console.log(err)
-				} else {
-					console.log(`file uploaded to ${data.Location}`)
+			if (conf.Output.S3) {
+				const s3 = new S3({accessKeyId: conf.Output.S3.AccessKey, secretAccessKey: conf.Output.S3.Secret})
+				const params = {
+					Bucket: conf.Output.S3.Bucket,
+					Key: conf.Output.S3.Path,
+					Body: readFileSync(filename)
 				}
-			})
+				s3.upload(params, undefined,function(err, data) {
+					if (err) {
+						console.log(err)
+					} else {
+						console.log(`file uploaded to ${data.Location}`)
+					}
+				})
+			}
 		}
 	} else {
 		throw Error('Output location required')
@@ -103,6 +106,7 @@ function buildRecorderToken(key: string, secret: string): string {
 		'-fflags', '+igndts', // generate dts
 
 		// video (x11 grab)
+		"-draw_mouse", "0", // don't draw the mouse
 		'-thread_queue_size', '1024', // avoid thread message queue blocking
 		'-probesize', '42M', // increase probe size for bitrate estimation
 		// consider probesize 32 analyzeduration 0 for lower latency

@@ -3,7 +3,7 @@
 ## What it does
 
 The recorder grabs audio from pulse and video from a virtual frame buffer, and feeds them into ffmpeg.  
-You can output the recording to a file, upload it to s3, or forward it into a rtmp stream.  
+You can write the output as mp4 to a file or upload it to s3, or forward the output to a rtmp stream.  
 If you don't supply any output options, it will write to `/app/recording.mp4`
 
 A simple example:
@@ -93,10 +93,10 @@ All config options:
         "File": filename
         "RTMP": rtmp url
         "S3": {
-            "AccessID": aws access id
+            "AccessKey": aws access id
             "Secret": aws secret
             "Bucket": s3 bucket
-            "Key": filename
+            "Path": filename
         }
         "Width": scale output width
         "Height": scale output height
@@ -120,10 +120,10 @@ s3.json
     },
     "Output": {
         "S3": {
-            "AccessID": "<aws-access-id>",
+            "AccessKey": "<aws-access-key>",
             "Secret": "<aws-secret>",
             "Bucket": "bucket-name",
-            "Key": "recording.mp4"
+            "Path": "recording.mp4"
         }
     }
 }
