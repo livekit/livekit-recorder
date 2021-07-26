@@ -47,8 +47,8 @@ To use a config file, supply the full file as a string in `LIVEKIT_RECORDING_CON
 ```bash
 LIVEKIT_RECORDING_CONFIG="$(cat config.json)"
 ```
-input: Either Url or Template required.  
-output: Either File, RTMP, or S3 required.  
+input: Either `url` or `template` required.  
+output: Either `file`, `rtmp`, or `s3` required.  
 All other fields optional.
 
 All config options:
@@ -76,7 +76,7 @@ All config options:
             "accessKey": aws access id
             "secret": aws secret
             "bucket": s3 bucket
-            "path": filename
+            "key": filename
         }
         "width": scale output width
         "height": scale output height
@@ -105,8 +105,7 @@ file.json
 ```
 
 ```bash
-docker build -t livekit-recorder . \
-&& docker run -e LIVEKIT_RECORDING_CONFIG="$(cat file.json)" livekit-recorder
+docker run -e LIVEKIT_RECORDING_CONFIG="$(cat file.json)" livekit/livekit-recorder
 
 # copy file to host after completion
 docker cp <container_name>:app/recording.mp4 .
@@ -125,15 +124,14 @@ s3.json
             "accessKey": "<aws-access-key>",
             "secret": "<aws-secret>",
             "bucket": "bucket-name",
-            "path": "recording.mp4"
+            "key": "recording.mp4"
         }
     }
 }
 ```
 
 ```bash
-docker build -t livekit-recorder . \
-&& docker run -e LIVEKIT_RECORDING_CONFIG="$(cat s3.json)" livekit-recorder
+docker run -e LIVEKIT_RECORDING_CONFIG="$(cat s3.json)" -rm livekit/livekit-recorder
 ```
 
 ### Stream to Twitch, scaled to 720p
@@ -160,8 +158,7 @@ twitch.json
 ```
 
 ```bash
-docker build -t livekit-recorder . \
-&& docker run -e LIVEKIT_RECORDING_CONFIG="$(cat twitch.json)" livekit-recorder
+docker run -e LIVEKIT_RECORDING_CONFIG="$(cat twitch.json)" -rm livekit-recorder
 ```
 
 ## Building your own templates
@@ -172,10 +169,8 @@ To stop the recorder, the page must send a `console.log('END_RECORDING')`.
 For example, our templates do the following:
 ```js  
 const onParticipantDisconnected = (room: Room) => {
-    updateParticipantSize(room)
-
     /* Special rule for recorder */
-    if (recorder && parseInt(recorder, 10) === 1 && room.participants.size === 0) {
+    if (room.participants.size === 0) {
       console.log("END_RECORDING")
     }
 }

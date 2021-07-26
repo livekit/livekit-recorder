@@ -84,19 +84,25 @@ function buildRecorderToken(room: string, key: string, secret: string): string {
 	let uploadFunc: () => void
 	if (conf.output.file) {
 		ffmpegOutput = [conf.output.file]
+		console.log(`Writing to app/${conf.output.file}`)
 	} else if (conf.output.rtmp) {
 		ffmpegOutputOpts = ffmpegOutputOpts.concat(['-maxrate', conf.output.videoBitrate, '-bufsize', conf.output.videoBuffer])
 		ffmpegOutput = ['-f', 'flv', conf.output.rtmp]
+		console.log(`Streaming to ${conf.output.rtmp}`)
 	} else if (conf.output.s3) {
 		const filename = 'recording.mp4'
-
 		ffmpegOutput = [filename]
 		uploadFunc = function() {
 			if (conf.output.s3) {
-				const s3 = new S3({accessKeyId: conf.output.s3.accessKey, secretAccessKey: conf.output.s3.secret})
+				let s3: S3
+				if (conf.output.s3.accessKey && conf.output.s3.secret) {
+					s3 = new S3({accessKeyId: conf.output.s3.accessKey, secretAccessKey: conf.output.s3.secret})
+				} else {
+					s3 = new S3()
+				}
 				const params = {
 					Bucket: conf.output.s3.bucket,
-					Key: conf.output.s3.path,
+					Key: conf.output.s3.key,
 					Body: readFileSync(filename)
 				}
 				s3.upload(params, undefined,function(err, data) {
@@ -108,6 +114,7 @@ function buildRecorderToken(room: string, key: string, secret: string): string {
 				})
 			}
 		}
+		console.log(`Saving to s3://${conf.output.s3.bucket}/${conf.output.s3.key}`)
 	} else {
 		throw Error('Output location required')
 	}
