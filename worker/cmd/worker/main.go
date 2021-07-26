@@ -83,7 +83,7 @@ func startWorker(c *cli.Context) error {
 		return err
 	}
 
-	worker := service.InitializeWorker(rc)
+	worker := service.InitializeWorker(conf, rc)
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
