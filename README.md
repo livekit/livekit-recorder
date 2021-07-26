@@ -158,7 +158,7 @@ twitch.json
 ```
 
 ```bash
-docker run -e LIVEKIT_RECORDING_CONFIG="$(cat twitch.json)" -rm livekit-recorder
+docker run -e LIVEKIT_RECORDING_CONFIG="$(cat twitch.json)" -rm livekit/livekit-recorder
 ```
 
 ## Building your own templates
