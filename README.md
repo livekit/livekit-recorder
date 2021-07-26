@@ -1,4 +1,4 @@
-# livekit-recording
+# LiveKit Recording
 
 ## What it does
 
