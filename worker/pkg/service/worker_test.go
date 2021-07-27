@@ -23,6 +23,7 @@ func TestWorker(t *testing.T) {
 	conf := config.TestConfig()
 	rc, err := StartRedis(conf)
 	require.NoError(t, err)
+	require.NoError(t, err)
 
 	worker := InitializeWorker(conf, rc)
 	go func() {
@@ -126,6 +127,7 @@ func submitReserved(t *testing.T, rc *redis.Client) {
 
 func reserveRecorder(ctx context.Context, rc *redis.Client, req *livekit.RecordingReservation) (string, error) {
 	id := utils.NewGuid(utils.RecordingPrefix)
+	req.Id = id
 	b, err := proto.Marshal(req)
 	if err != nil {
 		return "", err
