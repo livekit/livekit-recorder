@@ -1,15 +1,12 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/go-redis/redis/v8"
-	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
 	"github.com/livekit/livekit-recording/worker/pkg/config"
@@ -26,11 +23,11 @@ func main() {
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:  "config",
-				Usage: "path to LiveKit config file",
+				Usage: "path to LiveKit recording config defaults",
 			},
 			&cli.StringFlag{
 				Name:    "config-body",
-				Usage:   "LiveKit config in YAML, typically passed in as an environment var in a container",
+				Usage:   "Default LiveKit recording config in JSON, typically passed in as an env var in a container",
 				EnvVars: []string{"LIVEKIT_RECORDING_CONFIG"},
 			},
 			&cli.StringFlag{
@@ -70,19 +67,10 @@ func startWorker(c *cli.Context) error {
 
 	logger.Init(conf.LogLevel)
 
-	// redis work queue
-	logger.Infow("connecting to redis work queue", "addr", conf.Redis.Address)
-	rc := redis.NewClient(&redis.Options{
-		Addr:     conf.Redis.Address,
-		Username: conf.Redis.Username,
-		Password: conf.Redis.Password,
-		DB:       conf.Redis.DB,
-	})
-	if err := rc.Ping(context.Background()).Err(); err != nil {
-		err = errors.Wrap(err, "unable to connect to redis")
+	rc, err := service.StartRedis(conf)
+	if err != nil {
 		return err
 	}
-
 	worker := service.InitializeWorker(conf, rc)
 
 	sigChan := make(chan os.Signal, 1)
