@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/livekit/livekit-server/pkg/recorder"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
@@ -29,16 +28,82 @@ func TestWorker(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
-	testSubmit(t, ctx, worker, rc, "test-recording")
-	// wait to finish
-	time.Sleep(time.Second * 2)
-	require.Equal(t, Available, worker.status)
+	svc := recorder.NewRecordingService(rc)
+
+	t.Run("Submit", func(t *testing.T) {
+		id := "test-submit"
+		_ = rc.Del(ctx, worker.getKey(id)).Err()
+		submit(t, svc, worker, id)
+		// wait to finish
+		time.Sleep(time.Millisecond * 5100)
+		require.Equal(t, Available, worker.status)
+	})
+
+	t.Run("Reserved", func(t *testing.T) {
+		id1 := "test-reserved-1"
+		id2 := "test-reserved-2"
+		_ = rc.Del(ctx, worker.getKey(id1)).Err()
+		_ = rc.Del(ctx, worker.getKey(id2)).Err()
+		submit(t, svc, worker, id1)
+		submitReserved(t, svc, id2)
+		// wait to finish
+		time.Sleep(time.Millisecond * 5100)
+		require.Equal(t, Available, worker.status)
+	})
+
+	t.Run("Stop", func(t *testing.T) {
+		id := "test-stop"
+		_ = rc.Del(ctx, worker.getKey(id)).Err()
+		submit(t, svc, worker, id)
+		// server ends recording
+		require.NoError(t, svc.EndRecording(id))
+		time.Sleep(time.Millisecond * 50)
+		// check that recording has ended early
+		require.Equal(t, Available, worker.status)
+	})
+
+	t.Run("Kill", func(t *testing.T) {
+		id := "test-kill"
+		_ = rc.Del(ctx, worker.getKey(id)).Err()
+		submit(t, svc, worker, id)
+		// worker is killed
+		worker.Stop()
+		time.Sleep(time.Millisecond * 50)
+		// check that recording has ended early
+		require.Equal(t, Available, worker.status)
+	})
 }
 
-func testSubmit(t *testing.T, ctx context.Context, worker *Worker, rc *redis.Client, id string) {
+func submit(t *testing.T, svc *recorder.RecordingService, worker *Worker, id string) {
 	// send recording reservation
-	req := &livekit.StartRoomRecording{
-		Id: id,
+	msg := createRequest(t, id)
+
+	// server sends reservation
+	require.NoError(t, svc.ReserveRecording(msg, id))
+
+	// check that worker is reserved
+	require.Equal(t, Reserved, worker.status)
+
+	// start recording
+	require.NoError(t, svc.StartRecording(id))
+	time.Sleep(time.Millisecond * 50)
+
+	// check that worker is recording
+	require.Equal(t, Recording, worker.status)
+}
+
+func submitReserved(t *testing.T, svc *recorder.RecordingService, id string) {
+	// send recording reservation
+	msg := createRequest(t, id)
+
+	// server sends reservation
+	require.Error(t, svc.ReserveRecording(msg, id))
+}
+
+func createRequest(t *testing.T, id string) string {
+	req := &livekit.RecordingReservation{
+		Id:          id,
+		SubmittedAt: time.Now().UnixNano(),
 		Input: &livekit.RecordingInput{
 			Template: &livekit.RecordingTemplate{
 				Type:  "grid",
@@ -55,21 +120,5 @@ func testSubmit(t *testing.T, ctx context.Context, worker *Worker, rc *redis.Cli
 	}
 	b, err := proto.Marshal(req)
 	require.NoError(t, err)
-
-	resp := rc.Subscribe(ctx, recorder.ResponseChannel(req.Id)).Channel()
-	require.NoError(t, rc.Publish(ctx, recorder.ReservationChannel, b).Err())
-
-	// get response from worker
-	select {
-	case <-resp:
-	case <-time.After(time.Second):
-		t.Error("no response from worker")
-	}
-	// check that worker is reserved
-	require.Equal(t, Reserved, worker.status)
-
-	// start recording
-	require.NoError(t, rc.Publish(ctx, recorder.StartRecordingChannel(req.Id), b).Err())
-	time.Sleep(time.Millisecond * 50)
-	require.Equal(t, Recording, worker.status)
+	return string(b)
 }

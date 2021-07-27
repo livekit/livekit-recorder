@@ -28,9 +28,10 @@ type Worker struct {
 type Status string
 
 const (
-	Available Status = "available"
-	Reserved  Status = "reserved"
-	Recording Status = "recording"
+	Available      Status = "available"
+	Reserved       Status = "reserved"
+	Recording      Status = "recording"
+	requestTimeout        = time.Second * 2
 )
 
 func InitializeWorker(conf *config.Config, rc *redis.Client) *Worker {
@@ -45,27 +46,32 @@ func InitializeWorker(conf *config.Config, rc *redis.Client) *Worker {
 }
 
 func (w *Worker) Start() error {
-	logger.Debugw("Starting worker")
+	logger.Debugw("Starting worker", "mock", w.mock)
 
 	pubsub := w.rc.Subscribe(w.ctx, recorder.ReservationChannel)
 	for msg := range pubsub.Channel() {
 		logger.Debugw("Request received")
-		req := &livekit.StartRoomRecording{}
+		req := &livekit.RecordingReservation{}
 		err := proto.Unmarshal([]byte(msg.Payload), req)
 		if err != nil {
 			return err
 		}
 
-		key := w.getKey(req)
-		claimed, start, stop, err := w.Claim(req.Id, key)
-		if err != nil {
-			logger.Errorw("Request failed", err)
-			return err
-		} else if !claimed {
-			logger.Debugw("Request locked")
+		if req.SubmittedAt < time.Now().Add(-requestTimeout).UnixNano() {
+			logger.Debugw("Discarding old request", "ID", req.Id)
 			continue
 		}
-		logger.Debugw("Request claimed")
+
+		key := w.getKey(req.Id)
+		claimed, start, stop, err := w.Claim(req.Id, key)
+		if err != nil {
+			logger.Errorw("Request failed", err, "ID", req.Id)
+			return err
+		} else if !claimed {
+			logger.Debugw("Request locked", "ID", req.Id)
+			continue
+		}
+		logger.Debugw("Request claimed", "ID", req.Id)
 
 		err = w.Run(req, key, start, stop)
 		if err != nil {
@@ -92,14 +98,13 @@ func (w *Worker) Claim(id, key string) (locked bool, start, kill <-chan *redis.M
 	return
 }
 
-func (w *Worker) Run(req *livekit.StartRoomRecording, key string, start, stop <-chan *redis.Message) error {
+func (w *Worker) Run(req *livekit.RecordingReservation, key string, start, stop <-chan *redis.Message) error {
 	<-start
 	w.status = Recording
 
 	defer func() {
-		err := w.rc.Del(w.ctx, key).Err()
-		if err != nil {
-			logger.Errorw("failed to unlock job", err)
+		if err := w.rc.Del(w.ctx, key).Err(); err != nil {
+			logger.Errorw("failed to unlock job", err, "ID", req.Id)
 		}
 		w.status = Available
 	}()
@@ -111,31 +116,31 @@ func (w *Worker) Run(req *livekit.StartRoomRecording, key string, start, stop <-
 	select {
 	case err := <-done:
 		if err != nil {
-			logger.Errorw("Recording failed", err)
+			logger.Errorw("Recording failed", err, "ID", req.Id)
 		} else {
-			logger.Infow("Recording finished")
+			logger.Infow("Recording finished", "ID", req.Id)
 		}
 	case <-stop:
-		logger.Infow("Recording stopped by livekit server")
+		logger.Infow("Recording stopped by livekit server", "ID", req.Id)
 		// TODO: kill
 	case <-w.kill:
-		logger.Infow("Recording killed by recording service")
+		logger.Infow("Recording killed by recording service", "ID", req.Id)
 		// TODO: kill
 	}
 
 	return nil
 }
 
-func (w *Worker) Launch(req *livekit.StartRoomRecording, done chan error) {
+func (w *Worker) Launch(req *livekit.RecordingReservation, done chan error) {
 	_, err := config.Merge(w.defaults, req)
 	if err != nil {
 		done <- errors.Wrap(err, "failed to build recorder config")
 		return
 	}
 
-	logger.Debugw("Recording started")
+	logger.Debugw("Recording started", "ID", req.Id)
 	if w.mock {
-		time.Sleep(time.Second * 1)
+		time.Sleep(time.Second * 5)
 	} else {
 		// TODO: launch
 	}
@@ -147,6 +152,6 @@ func (w *Worker) Stop() {
 	w.kill <- struct{}{}
 }
 
-func (w *Worker) getKey(recording *livekit.StartRoomRecording) string {
-	return fmt.Sprintf("recording-%s", recording.Id)
+func (w *Worker) getKey(id string) string {
+	return fmt.Sprintf("recording-lock-%s", id)
 }

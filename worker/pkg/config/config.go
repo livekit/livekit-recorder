@@ -89,7 +89,7 @@ func (conf *Config) updateFromCLI(c *cli.Context) error {
 	return nil
 }
 
-func Merge(defaults *Config, req *livekit.StartRoomRecording) (string, error) {
+func Merge(defaults *Config, req *livekit.RecordingReservation) (string, error) {
 	merged := &Config{
 		Input: &livekit.RecordingInput{
 			Url:       req.Input.Url,

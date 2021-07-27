@@ -18,3 +18,4 @@ require (
 )
 
 replace github.com/livekit/livekit-server => ../../livekit-server
+replace github.com/livekit/protocol => ../../protocol
