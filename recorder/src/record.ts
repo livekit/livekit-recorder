@@ -53,8 +53,8 @@ function buildRecorderToken(room: string, key: string, secret: string): string {
 		let token: string
 		if (template.token) {
 			token = template.token
-		} else if (template.roomName && template.apiKey && template.apiSecret) {
-			token = buildRecorderToken(template.roomName, template.apiKey, template.apiSecret)
+		} else if (template.roomName && conf.apiKey && conf.apiSecret) {
+			token = buildRecorderToken(template.roomName, conf.apiKey, conf.apiSecret)
 		} else {
 			throw Error('Either token, or room name, api key, and secret required')
 		}

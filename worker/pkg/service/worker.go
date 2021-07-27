@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	"github.com/livekit/livekit-server/pkg/recorder"
+	"github.com/livekit/livekit-server/pkg/recording"
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/proto"
 
@@ -49,7 +49,7 @@ func InitializeWorker(conf *config.Config, rc *redis.Client) *Worker {
 func (w *Worker) Start() error {
 	logger.Debugw("Starting worker", "mock", w.mock)
 
-	reservations := w.rc.Subscribe(w.ctx, recorder.ReservationChannel)
+	reservations := w.rc.Subscribe(w.ctx, recording.ReservationChannel)
 	defer reservations.Close()
 
 	for msg := range reservations.Channel() {
@@ -60,7 +60,7 @@ func (w *Worker) Start() error {
 			return err
 		}
 
-		if req.SubmittedAt < time.Now().Add(-recorder.ReservationTimeout).UnixNano() {
+		if req.SubmittedAt < time.Now().Add(-recording.ReservationTimeout).UnixNano() {
 			logger.Debugw("Discarding old request", "ID", req.Id)
 			continue
 		}
@@ -93,9 +93,9 @@ func (w *Worker) Claim(id, key string) (locked bool, start, stop *redis.PubSub, 
 	}
 
 	w.status = Reserved
-	start = w.rc.Subscribe(w.ctx, recorder.StartRecordingChannel(id))
-	stop = w.rc.Subscribe(w.ctx, recorder.EndRecordingChannel(id))
-	err = w.rc.Publish(w.ctx, recorder.ResponseChannel(id), nil).Err()
+	start = w.rc.Subscribe(w.ctx, recording.StartRecordingChannel(id))
+	stop = w.rc.Subscribe(w.ctx, recording.EndRecordingChannel(id))
+	err = w.rc.Publish(w.ctx, recording.ResponseChannel(id), nil).Err()
 	if err != nil {
 		_ = start.Close()
 		_ = stop.Close()

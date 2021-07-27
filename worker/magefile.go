@@ -57,8 +57,10 @@ func Proto() error {
 	}
 	protoDir := info.Dir
 	updated, err := target.Path(
-		"proto/livekit_recording_internal.pb.go",
-		protoDir+"/livekit_recording_internal.proto",
+		"proto/livekit_models.pb.go",
+		"proto/livekit_internal.pb.go",
+		protoDir+"/livekit_models.proto",
+		protoDir+"/livekit_internal.proto",
 	)
 	if err != nil {
 		return err
@@ -88,7 +90,8 @@ func Proto() error {
 		"--go_opt=paths=source_relative",
 		"--plugin=go="+protocGoPath,
 		"-I="+protoDir,
-		protoDir+"/livekit_recording_internal.proto",
+		protoDir+"/livekit_internal.proto",
+		protoDir+"/livekit_models.proto",
 	)
 	connectStd(cmd)
 	if err := cmd.Run(); err != nil {
