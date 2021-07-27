@@ -28,7 +28,7 @@ func TestMerge(t *testing.T) {
 		},
 	}
 
-	req := &livekit.StartRoomRecording{
+	req := &livekit.RecordingReservation{
 		Id: "id",
 		Input: &livekit.RecordingInput{
 			Template: &livekit.RecordingTemplate{

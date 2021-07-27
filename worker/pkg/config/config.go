@@ -13,7 +13,7 @@ type Config struct {
 	Redis    RedisConfig              `json:"redis"`
 	Input    *livekit.RecordingInput  `json:"input"`
 	Output   *livekit.RecordingOutput `json:"output"`
-	LogLevel string                   `json:"log_level"`
+	LogLevel string                   `json:"logLevel"`
 	Test     bool
 }
 

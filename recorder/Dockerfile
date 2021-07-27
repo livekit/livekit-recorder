@@ -14,7 +14,7 @@ RUN apt-get install -y ffmpeg
 
 # copy recorder
 WORKDIR /app
-COPY package.json package-lock.json tsconfig.json .
+COPY package.json package-lock.json tsconfig.json ./
 COPY src ./src
 RUN npm install \
     && npm install typescript \
