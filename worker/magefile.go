@@ -5,6 +5,7 @@ package main
 import (
 	"crypto/sha1"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"go/build"
 	"io/ioutil"
@@ -18,6 +19,8 @@ import (
 
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/target"
+
+	"github.com/livekit/livekit-recording/worker/version"
 )
 
 const (
@@ -132,6 +135,35 @@ func Build() error {
 	}
 
 	_ = checksummer.WriteChecksum()
+	return nil
+}
+
+// builds docker image for LiveKit server
+func Docker() error {
+	mg.Deps(Proto)
+	cmd := exec.Command("docker", "build", ".", "-t", fmt.Sprintf("%s:v%s", imageName, version.Version))
+	cmd.Dir = "../"
+	connectStd(cmd)
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func PublishDocker() error {
+	mg.Deps(Docker)
+
+	// don't publish snapshot versions as latest or minor version
+	if !strings.Contains(version.Version, "SNAPSHOT") {
+		return errors.New("cannot publish non-snapshot versions")
+	}
+
+	versionImg := fmt.Sprintf("%s:v%s", imageName, version.Version)
+	cmd := exec.Command("docker", "push", versionImg)
+	connectStd(cmd)
+	if err := cmd.Run(); err != nil {
+		return err
+	}
 	return nil
 }
 
