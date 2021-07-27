@@ -24,5 +24,4 @@ fi
 
 go mod download
 
-go get -u github.com/twitchtv/twirp/protoc-gen-twirp@v8.1.0
 go get -u google.golang.org/protobuf/cmd/protoc-gen-go@v1.27.1

@@ -5,9 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/livekit/livekit-server/pkg/recorder"
+	"github.com/livekit/livekit-server/pkg/recording"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/livekit/livekit-recording/worker/pkg/config"
 	"github.com/livekit/livekit-recording/worker/pkg/logger"
@@ -17,7 +16,6 @@ import (
 func TestWorker(t *testing.T) {
 	logger.Init("debug")
 
-	ctx := context.Background()
 	conf := config.TestConfig()
 	rc, err := StartRedis(conf)
 	require.NoError(t, err)
@@ -28,44 +26,34 @@ func TestWorker(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
-	svc := recorder.NewRecordingService(rc)
+	svc := recording.NewRoomRecorder(rc)
 
 	t.Run("Submit", func(t *testing.T) {
-		id := "test-submit"
-		_ = rc.Del(ctx, worker.getKey(id)).Err()
-		submit(t, svc, worker, id)
+		submit(t, svc, worker)
 		// wait to finish
 		time.Sleep(time.Millisecond * 5100)
 		require.Equal(t, Available, worker.status)
 	})
 
 	t.Run("Reserved", func(t *testing.T) {
-		id1 := "test-reserved-1"
-		id2 := "test-reserved-2"
-		_ = rc.Del(ctx, worker.getKey(id1)).Err()
-		_ = rc.Del(ctx, worker.getKey(id2)).Err()
-		submit(t, svc, worker, id1)
-		submitReserved(t, svc, id2)
+		submit(t, svc, worker)
+		submitReserved(t, svc)
 		// wait to finish
 		time.Sleep(time.Millisecond * 5100)
 		require.Equal(t, Available, worker.status)
 	})
 
 	t.Run("Stop", func(t *testing.T) {
-		id := "test-stop"
-		_ = rc.Del(ctx, worker.getKey(id)).Err()
-		submit(t, svc, worker, id)
+		id := submit(t, svc, worker)
 		// server ends recording
-		require.NoError(t, svc.EndRecording(id))
+		require.NoError(t, svc.EndRecording(context.Background(), id))
 		time.Sleep(time.Millisecond * 50)
 		// check that recording has ended early
 		require.Equal(t, Available, worker.status)
 	})
 
 	t.Run("Kill", func(t *testing.T) {
-		id := "test-kill"
-		_ = rc.Del(ctx, worker.getKey(id)).Err()
-		submit(t, svc, worker, id)
+		submit(t, svc, worker)
 		// worker is killed
 		worker.Stop()
 		time.Sleep(time.Millisecond * 50)
@@ -74,35 +62,9 @@ func TestWorker(t *testing.T) {
 	})
 }
 
-func submit(t *testing.T, svc *recorder.RecordingService, worker *Worker, id string) {
+func submit(t *testing.T, svc *recording.RoomRecorder, worker *Worker) string {
 	// send recording reservation
-	msg := createRequest(t, id)
-
-	// server sends reservation
-	require.NoError(t, svc.ReserveRecording(msg, id))
-
-	// check that worker is reserved
-	require.Equal(t, Reserved, worker.status)
-
-	// start recording
-	require.NoError(t, svc.StartRecording(id))
-	time.Sleep(time.Millisecond * 50)
-
-	// check that worker is recording
-	require.Equal(t, Recording, worker.status)
-}
-
-func submitReserved(t *testing.T, svc *recorder.RecordingService, id string) {
-	// send recording reservation
-	msg := createRequest(t, id)
-
-	// server sends reservation
-	require.Error(t, svc.ReserveRecording(msg, id))
-}
-
-func createRequest(t *testing.T, id string) string {
 	req := &livekit.RecordingReservation{
-		Id:          id,
 		SubmittedAt: time.Now().UnixNano(),
 		Input: &livekit.RecordingInput{
 			Template: &livekit.RecordingTemplate{
@@ -118,7 +80,44 @@ func createRequest(t *testing.T, id string) string {
 			VideoBuffer:  "2000k",
 		},
 	}
-	b, err := proto.Marshal(req)
+
+	// server sends reservation
+	id, err := svc.ReserveRecorder(context.Background(), req)
 	require.NoError(t, err)
-	return string(b)
+
+	// check that worker is reserved
+	require.Equal(t, Reserved, worker.status)
+
+	// start recording
+	require.NoError(t, svc.StartRecording(context.Background(), id))
+	time.Sleep(time.Millisecond * 50)
+
+	// check that worker is recording
+	require.Equal(t, Recording, worker.status)
+
+	return id
+}
+
+func submitReserved(t *testing.T, svc *recording.RoomRecorder) {
+	// send recording reservation
+	req := &livekit.RecordingReservation{
+		SubmittedAt: time.Now().UnixNano(),
+		Input: &livekit.RecordingInput{
+			Template: &livekit.RecordingTemplate{
+				Type:  "grid",
+				WsUrl: "wss://testing.livekit.io",
+				Token: "token",
+			},
+			Framerate: 60,
+		},
+		Output: &livekit.RecordingOutput{
+			File:         "recording.mp4",
+			VideoBitrate: "1000k",
+			VideoBuffer:  "2000k",
+		},
+	}
+
+	// server sends reservation
+	_, err := svc.ReserveRecorder(context.Background(), req)
+	require.Error(t, err)
 }

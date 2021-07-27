@@ -7,7 +7,7 @@ require (
 	github.com/go-logr/logr v1.0.0
 	github.com/go-logr/zapr v1.0.0
 	github.com/go-redis/redis/v8 v8.11.0
-	github.com/livekit/livekit-server v1.10.6
+	github.com/livekit/livekit-server v0.11.2
 	github.com/magefile/mage v1.11.0
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
@@ -16,6 +16,3 @@ require (
 	go.uber.org/zap v1.18.1
 	google.golang.org/protobuf v1.27.1
 )
-
-replace github.com/livekit/livekit-server => ../../livekit-server
-replace github.com/livekit/protocol => ../../protocol
