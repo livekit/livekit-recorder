@@ -23,7 +23,6 @@ func TestWorker(t *testing.T) {
 	conf := config.TestConfig()
 	rc, err := StartRedis(conf)
 	require.NoError(t, err)
-	require.NoError(t, err)
 
 	worker := InitializeWorker(conf, rc)
 	go func() {
