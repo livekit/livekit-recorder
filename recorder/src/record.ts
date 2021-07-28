@@ -131,6 +131,11 @@ function buildRecorderToken(room: string, key: string, secret: string): string {
 		'-fflags', 'nobuffer', // reduce delay
 		'-fflags', '+igndts', // generate dts
 
+		// audio (pulse grab)
+		'-thread_queue_size', '1024', // avoid thread message queue blocking
+		'-ac', '2', // 2 channels
+		'-f', 'pulse', '-i', 'grab.monitor',
+
 		// video (x11 grab)
 		"-draw_mouse", "0", // don't draw the mouse
 		'-thread_queue_size', '1024', // avoid thread message queue blocking
@@ -139,11 +144,6 @@ function buildRecorderToken(room: string, key: string, secret: string): string {
 		'-s', `${conf.input.width}x${conf.input.height}`,
 		'-r', `${conf.input.framerate}`,
 		'-f', 'x11grab', '-i', `${xvfb.display()}.0`,
-
-		// audio (pulse grab)
-		'-thread_queue_size', '1024', // avoid thread message queue blocking
-		'-ac', '2', // 2 channels
-		'-f', 'pulse', '-i', 'grab.monitor',
 
 		// output
 		...ffmpegOutputOpts, ...ffmpegOutput,
