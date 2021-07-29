@@ -30,6 +30,9 @@ func TestWorker(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
+	// wait for worker to start
+	time.Sleep(time.Millisecond * 100)
+
 	t.Run("Submit", func(t *testing.T) {
 		submit(t, ctx, rc, worker)
 		// wait to finish
