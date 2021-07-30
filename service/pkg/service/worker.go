@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -22,8 +23,8 @@ type Worker struct {
 	ctx      context.Context
 	rc       *redis.Client
 	defaults *config.Config
-	status   Status
-	shutdown bool
+	status   atomic.Value // Status
+	shutdown atomic.Value // bool
 	kill     chan struct{}
 
 	mock bool
@@ -39,11 +40,18 @@ const (
 )
 
 func InitializeWorker(conf *config.Config, rc *redis.Client) *Worker {
+	status := atomic.Value{}
+	status.Store(Available)
+
+	shutdown := atomic.Value{}
+	shutdown.Store(false)
+
 	return &Worker{
 		ctx:      context.Background(),
 		rc:       rc,
 		defaults: conf,
-		status:   Available,
+		status:   status,
+		shutdown: shutdown,
 		kill:     make(chan struct{}),
 		mock:     conf.Test,
 	}
@@ -85,10 +93,10 @@ func (w *Worker) Start() error {
 			return err
 		}
 
-		if w.shutdown {
+		if w.shutdown.Load().(bool) {
 			return nil
 		}
-		w.status = Available
+		w.status.Store(Available)
 	}
 
 	return nil
@@ -100,7 +108,7 @@ func (w *Worker) Claim(id, key string) (locked bool, start, stop *redis.PubSub, 
 		return
 	}
 
-	w.status = Reserved
+	w.status.Store(Reserved)
 	start = w.rc.Subscribe(w.ctx, utils.StartRecordingChannel(id))
 	stop = w.rc.Subscribe(w.ctx, utils.EndRecordingChannel(id))
 	err = w.rc.Publish(w.ctx, utils.ReservationResponseChannel(id), nil).Err()
@@ -109,7 +117,7 @@ func (w *Worker) Claim(id, key string) (locked bool, start, stop *redis.PubSub, 
 
 func (w *Worker) Run(req *livekit.RecordingReservation, start, stop *redis.PubSub) error {
 	<-start.Channel()
-	w.status = Recording
+	w.status.Store(Recording)
 
 	conf, err := config.Merge(w.defaults, req)
 	if err != nil {
@@ -161,11 +169,11 @@ func (w *Worker) Run(req *livekit.RecordingReservation, start, stop *redis.PubSu
 }
 
 func (w *Worker) Status() Status {
-	return w.status
+	return w.status.Load().(Status)
 }
 
 func (w *Worker) Finish() {
-	w.shutdown = true
+	w.shutdown.Store(true)
 }
 
 func (w *Worker) Stop() {
