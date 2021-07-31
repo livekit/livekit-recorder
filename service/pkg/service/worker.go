@@ -99,9 +99,9 @@ func (w *Worker) Start() error {
 	}
 }
 
-func (w *Worker) Claim(id, key string) (locked bool, start, stop *redis.PubSub, err error) {
-	locked, err = w.rc.SetNX(w.ctx, key, rand.Int(), lockDuration).Result()
-	if !locked || err != nil {
+func (w *Worker) Claim(id, key string) (claimed bool, start, stop *redis.PubSub, err error) {
+	claimed, err = w.rc.SetNX(w.ctx, key, rand.Int(), lockDuration).Result()
+	if !claimed || err != nil {
 		return
 	}
 
@@ -114,6 +114,9 @@ func (w *Worker) Claim(id, key string) (locked bool, start, stop *redis.PubSub, 
 
 func (w *Worker) Run(req *livekit.RecordingReservation, start, stop *redis.PubSub) error {
 	<-start.Channel()
+	start.Close()
+	defer stop.Close()
+
 	w.status.Store(Recording)
 
 	conf, err := config.Merge(w.defaults, req)

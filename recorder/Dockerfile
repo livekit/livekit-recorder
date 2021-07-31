@@ -17,10 +17,10 @@ WORKDIR /app
 COPY package.json package-lock.json tsconfig.json ./
 COPY src ./src
 RUN npm install \
-    && npm install typescript
+    && npm install -g typescript
 
 # Silence error about livekit-server-sdk protos
-RUN tsc src/*; exit 0
+RUN tsc src/*.ts; exit 0
 
 COPY entrypoint.sh .
 ENTRYPOINT ["./entrypoint.sh"]

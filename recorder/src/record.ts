@@ -54,12 +54,12 @@ function buildRecorderToken(room: string, key: string, secret: string): string {
 		let token: string
 		if (template.token) {
 			token = template.token
-		} else if (template.roomName && conf.apiKey && conf.apiSecret) {
-			token = buildRecorderToken(template.roomName, conf.apiKey, conf.apiSecret)
+		} else if (template.room_name && conf.api_key && conf.api_secret) {
+			token = buildRecorderToken(template.room_name, conf.api_key, conf.api_secret)
 		} else {
 			throw Error('Either token, or room name, api key, and secret required')
 		}
-		url = `https://recorder.livekit.io/#/${template.type}?url=${encodeURIComponent(template.wsUrl)}&token=${token}`
+		url = `https://recorder.livekit.io/#/${template.type}?url=${encodeURIComponent(template.ws_url)}&token=${token}`
 	} else if (conf.input.url) {
 		url = conf.input.url
 	} else {
@@ -70,11 +70,11 @@ function buildRecorderToken(room: string, key: string, secret: string): string {
 	// ffmpeg output options
 	let ffmpegOutputOpts = [
 		// audio
-		'-c:a', 'aac', '-b:a', conf.output.audioBitrate, '-ar', conf.output.audioFrequency,
+		'-c:a', 'aac', '-b:a', conf.output.audio_bitrate, '-ar', conf.output.audio_frequency,
 		'-ac', '2', '-af', 'aresample=async=1',
 		// video
 		'-c:v', 'libx264', '-preset', 'veryfast', '-tune', 'zerolatency',
-		'-b:v', conf.output.videoBitrate,
+		'-b:v', conf.output.video_bitrate,
 	]
 	if (conf.output.width && conf.output.height) {
 		ffmpegOutputOpts = ffmpegOutputOpts.concat('-s', `${conf.output.width}x${conf.output.height}`)
@@ -84,7 +84,7 @@ function buildRecorderToken(room: string, key: string, secret: string): string {
 	let ffmpegOutput: string[]
 	let uploadFunc: () => void
 	if (conf.output.rtmp) {
-		ffmpegOutputOpts = ffmpegOutputOpts.concat(['-maxrate', conf.output.videoBitrate, '-bufsize', conf.output.videoBuffer])
+		ffmpegOutputOpts = ffmpegOutputOpts.concat(['-maxrate', conf.output.video_bitrate, '-bufsize', conf.output.video_buffer])
 		ffmpegOutput = ['-f', 'flv', conf.output.rtmp]
 		console.log(`Streaming to ${conf.output.rtmp}`)
 	} else if (conf.output.file) {
@@ -94,8 +94,8 @@ function buildRecorderToken(room: string, key: string, secret: string): string {
 			uploadFunc = function() {
 				if (conf.output.s3) {
 					let s3: S3
-					if (conf.output.s3.accessKey && conf.output.s3.secret) {
-						s3 = new S3({accessKeyId: conf.output.s3.accessKey, secretAccessKey: conf.output.s3.secret})
+					if (conf.output.s3.access_key && conf.output.s3.secret) {
+						s3 = new S3({accessKeyId: conf.output.s3.access_key, secretAccessKey: conf.output.s3.secret})
 					} else {
 						s3 = new S3()
 					}

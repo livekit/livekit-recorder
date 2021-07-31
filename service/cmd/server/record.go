@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/livekit/protocol/utils"
@@ -60,10 +61,15 @@ func startRecording(c *cli.Context) error {
 
 	select {
 	case <-sub.Channel():
-		return rc.Publish(ctx, utils.StartRecordingChannel(req.Id), nil).Err()
+		if err = rc.Publish(ctx, utils.StartRecordingChannel(req.Id), nil).Err(); err != nil {
+			return err
+		}
 	case <-time.After(utils.RecorderTimeout):
 		return errors.New("no response from recorder service")
 	}
+
+	fmt.Println("Recording ID:", req.Id)
+	return nil
 }
 
 func stopRecording(c *cli.Context) error {
