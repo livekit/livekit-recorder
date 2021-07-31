@@ -62,15 +62,15 @@ Supply your config as json in `LIVEKIT_RECORDER_CONFIG`:
 ```bash
 LIVEKIT_RECORDER_CONFIG="$(cat config.json)"
 ```
-input: Either `url` or `template` required. For `template`, either `token`, or `apiKey`, `apiSecret`, and `roomName` required.    
+input: Either `url` or `template` required. For `template`, either `token`, or `api_key`, `api_secret`, and `room_name` required.    
 output: Either `file`, `rtmp`, or `s3` required.  
 All other fields optional.
 
 All config options:
 ```yaml
 {
-    "api_key": livekit server api key - required if using template + roomName
-    "api_secret": livekit server api secret - required if using template + roomName
+    "api_key": livekit server api key - required if using template + room_name
+    "api_secret": livekit server api secret - required if using template + room_name
     "input": {
         "url": custom url of recording web page
         "template": {
