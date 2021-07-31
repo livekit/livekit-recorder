@@ -22,14 +22,14 @@ term_handler() {
   exit 143; # 128 + 15 -- SIGTERM
 }
 
-# on callback, kill the last background process, which is `tail -f /dev/null` and execute the specified handler
+# On callback, kill the last background process, which is `tail -f /dev/null` and execute the specified handler
 trap 'kill ${!}; term_handler' SIGTERM
 
-# run application
+# Run recorder
 node src/record.js &
 pid="$!"
 
-# wait forever
+# Wait forever
 while true
 do
   tail -f /dev/null & wait ${!}

@@ -60,7 +60,7 @@ func TestWorker(t *testing.T) {
 	t.Run("Kill", func(t *testing.T) {
 		submit(t, ctx, rc, worker)
 		// worker is killed
-		worker.Stop()
+		worker.Stop(true)
 		time.Sleep(time.Millisecond * 50)
 		// check that recording has ended early
 		require.Equal(t, Available, worker.Status())

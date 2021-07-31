@@ -44,6 +44,7 @@ func NewConfig(confString string, c *cli.Context) (*Config, error) {
 			VideoBitrate:   "2976k",
 			VideoBuffer:    "5952k",
 		},
+		LogLevel: "debug",
 	}
 
 	if confString != "" {

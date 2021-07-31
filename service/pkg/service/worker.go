@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -24,7 +25,7 @@ type Worker struct {
 	rc       *redis.Client
 	defaults *config.Config
 	status   atomic.Value // Status
-	shutdown atomic.Value // bool
+	shutdown chan struct{}
 	kill     chan struct{}
 
 	mock bool
@@ -40,18 +41,12 @@ const (
 )
 
 func InitializeWorker(conf *config.Config, rc *redis.Client) *Worker {
-	status := atomic.Value{}
-	status.Store(Available)
-
-	shutdown := atomic.Value{}
-	shutdown.Store(false)
-
 	return &Worker{
 		ctx:      context.Background(),
 		rc:       rc,
 		defaults: conf,
-		status:   status,
-		shutdown: shutdown,
+		status:   atomic.Value{},
+		shutdown: make(chan struct{}),
 		kill:     make(chan struct{}),
 		mock:     conf.Test,
 	}
@@ -63,43 +58,45 @@ func (w *Worker) Start() error {
 	reservations := w.rc.Subscribe(w.ctx, utils.ReservationChannel)
 	defer reservations.Close()
 
-	for msg := range reservations.Channel() {
-		logger.Debugw("Request received")
-		req := &livekit.RecordingReservation{}
-		err := proto.Unmarshal([]byte(msg.Payload), req)
-		if err != nil {
-			return err
-		}
-
-		if req.SubmittedAt < time.Now().Add(-utils.ReservationTimeout).UnixNano() {
-			logger.Debugw("Discarding old request", "ID", req.Id)
-			continue
-		}
-
-		key := w.getKey(req.Id)
-		claimed, start, stop, err := w.Claim(req.Id, key)
-		if err != nil {
-			logger.Errorw("Request failed", err, "ID", req.Id)
-			return err
-		} else if !claimed {
-			logger.Debugw("Request locked", "ID", req.Id)
-			continue
-		}
-		logger.Debugw("Request claimed", "ID", req.Id)
-
-		err = w.Run(req, start, stop)
-		if err != nil {
-			logger.Errorw("Recorder failed", err)
-			return err
-		}
-
-		if w.shutdown.Load().(bool) {
-			return nil
-		}
+	for {
 		w.status.Store(Available)
-	}
+		logger.Debugw("Recorder waiting")
 
-	return nil
+		select {
+		case <-w.shutdown:
+			logger.Debugw("Shutting down")
+			return nil
+		case msg := <-reservations.Channel():
+			logger.Debugw("Request received")
+			req := &livekit.RecordingReservation{}
+			err := proto.Unmarshal([]byte(msg.Payload), req)
+			if err != nil {
+				return err
+			}
+
+			if req.SubmittedAt < time.Now().Add(-utils.ReservationTimeout).UnixNano() {
+				logger.Debugw("Discarding old request", "ID", req.Id)
+				continue
+			}
+
+			key := w.getKey(req.Id)
+			claimed, start, stop, err := w.Claim(req.Id, key)
+			if err != nil {
+				logger.Errorw("Request failed", err, "ID", req.Id)
+				return err
+			} else if !claimed {
+				logger.Debugw("Request locked", "ID", req.Id)
+				continue
+			}
+			logger.Debugw("Request claimed", "ID", req.Id)
+
+			err = w.Run(req, start, stop)
+			if err != nil {
+				logger.Errorw("Recorder failed", err)
+				return err
+			}
+		}
+	}
 }
 
 func (w *Worker) Claim(id, key string) (locked bool, start, stop *redis.PubSub, err error) {
@@ -130,10 +127,10 @@ func (w *Worker) Run(req *livekit.RecordingReservation, start, stop *redis.PubSu
 	if w.mock {
 		cmd = exec.Command("sleep", "5")
 	} else {
-		cmd = exec.Command(
-			fmt.Sprintf("LIVEKIT_RECORDER_CONFIG=%s", conf),
-			"ts-node", "recorder/src/record.ts",
-		)
+		cmd = exec.Command("node", "app/src/record.js")
+		cmd.Env = append(cmd.Env, fmt.Sprintf("LIVEKIT_RECORDER_CONFIG=%s", conf))
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
 	}
 
 	err = cmd.Start()
@@ -141,28 +138,33 @@ func (w *Worker) Run(req *livekit.RecordingReservation, start, stop *redis.PubSu
 		return errors.Wrap(err, "failed to launch recorder")
 	}
 	logger.Infow("Recording started", "ID", req.Id)
-	done := make(chan error, 1)
+
+	done := make(chan struct{}, 1)
 	go func() {
-		done <- cmd.Wait()
+		for {
+			select {
+			case <-done:
+				return
+			case <-stop.Channel():
+				logger.Infow("Recording stopped by livekit server", "ID", req.Id)
+				if err = cmd.Process.Signal(syscall.SIGTERM); err != nil {
+					logger.Errorw("Failed to interrupt recording", err, "ID", req.Id)
+				}
+			case <-w.kill:
+				logger.Infow("Recording stopped by recording service interrupt", "ID", req.Id)
+				if err = cmd.Process.Signal(syscall.SIGTERM); err != nil {
+					logger.Errorw("Failed to interrupt recording", err, "ID", req.Id)
+				}
+			}
+		}
 	}()
 
-	select {
-	case err = <-done:
-		if err != nil {
-			logger.Errorw("Recording failed", err, "ID", req.Id)
-		} else {
-			logger.Infow("Recording finished", "ID", req.Id)
-		}
-	case <-stop.Channel():
-		logger.Infow("Recording stopped by livekit server", "ID", req.Id)
-		if err = cmd.Process.Signal(os.Interrupt); err != nil {
-			logger.Errorw("Failed to interrupt recording", err, "ID", req.Id)
-		}
-	case <-w.kill:
-		logger.Infow("Recording stopped by recording service interrupt", "ID", req.Id)
-		if err = cmd.Process.Signal(os.Interrupt); err != nil {
-			logger.Errorw("Failed to interrupt recording", err, "ID", req.Id)
-		}
+	err = cmd.Wait()
+	done <- struct{}{}
+	if err != nil {
+		logger.Errorw("Recording failed", err, "ID", req.Id)
+	} else {
+		logger.Infow("Recording finished", "ID", req.Id)
 	}
 
 	return nil
@@ -172,12 +174,11 @@ func (w *Worker) Status() Status {
 	return w.status.Load().(Status)
 }
 
-func (w *Worker) Finish() {
-	w.shutdown.Store(true)
-}
-
-func (w *Worker) Stop() {
-	w.kill <- struct{}{}
+func (w *Worker) Stop(kill bool) {
+	w.shutdown <- struct{}{}
+	if kill {
+		w.kill <- struct{}{}
+	}
 }
 
 func (w *Worker) getKey(id string) string {

@@ -58,9 +58,11 @@ export function loadConfig(): Config {
     }
 
     // write to file if no output specified
-    if (!(conf.output.file || conf.output.rtmp || conf.output.s3)) {
-        conf.output.file = 'recording.mp4'
+    if (!(conf.output.file || conf.output.rtmp)) {
+        const now = new Date().toISOString().
+            replace(/T/, '_').
+            replace(/\..+/, '')
+        conf.output.file = `recording_${now}.mp4`
     }
-
     return conf
 }
