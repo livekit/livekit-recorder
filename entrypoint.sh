@@ -30,7 +30,4 @@ trap 'kill ${!}; term_handler' SIGTERM
 pid="$!"
 
 # Wait forever
-while true
-do
-  tail -f /dev/null & wait ${!}
-done
+wait ${!}

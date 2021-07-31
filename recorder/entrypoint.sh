@@ -29,8 +29,5 @@ trap 'kill ${!}; term_handler' SIGTERM
 node src/record.js &
 pid="$!"
 
-# Wait forever
-while true
-do
-  tail -f /dev/null & wait ${!}
-done
+# Wait
+wait ${!}
