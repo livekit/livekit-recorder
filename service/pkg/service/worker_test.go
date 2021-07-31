@@ -36,7 +36,7 @@ func TestWorker(t *testing.T) {
 	t.Run("Submit", func(t *testing.T) {
 		submit(t, ctx, rc, worker)
 		// wait to finish
-		time.Sleep(time.Millisecond * 5100)
+		time.Sleep(time.Millisecond * 3100)
 		require.Equal(t, Available, worker.Status())
 	})
 
@@ -44,7 +44,7 @@ func TestWorker(t *testing.T) {
 		submit(t, ctx, rc, worker)
 		submitReserved(t, rc)
 		// wait to finish
-		time.Sleep(time.Millisecond * 5100)
+		time.Sleep(time.Millisecond * 3100)
 		require.Equal(t, Available, worker.Status())
 	})
 
@@ -61,7 +61,7 @@ func TestWorker(t *testing.T) {
 		submit(t, ctx, rc, worker)
 		// worker is killed
 		worker.Stop(true)
-		time.Sleep(time.Millisecond * 50)
+		time.Sleep(time.Millisecond * 100)
 		// check that recording has ended early
 		require.Equal(t, Available, worker.Status())
 	})

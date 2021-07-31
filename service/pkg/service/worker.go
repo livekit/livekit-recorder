@@ -46,8 +46,8 @@ func InitializeWorker(conf *config.Config, rc *redis.Client) *Worker {
 		rc:       rc,
 		defaults: conf,
 		status:   atomic.Value{},
-		shutdown: make(chan struct{}),
-		kill:     make(chan struct{}),
+		shutdown: make(chan struct{}, 1),
+		kill:     make(chan struct{}, 1),
 		mock:     conf.Test,
 	}
 }
@@ -128,7 +128,7 @@ func (w *Worker) Run(req *livekit.RecordingReservation, start, stop *redis.PubSu
 	var cmd *exec.Cmd
 	logger.Debugw("Launching recorder", "ID", req.Id)
 	if w.mock {
-		cmd = exec.Command("sleep", "5")
+		cmd = exec.Command("sleep", "3")
 	} else {
 		cmd = exec.Command("node", "app/src/record.js")
 		cmd.Env = append(cmd.Env, fmt.Sprintf("LIVEKIT_RECORDER_CONFIG=%s", conf))
@@ -164,8 +164,9 @@ func (w *Worker) Run(req *livekit.RecordingReservation, start, stop *redis.PubSu
 
 	err = cmd.Wait()
 	done <- struct{}{}
-	if err != nil {
+	if err != nil && !w.mock {
 		logger.Errorw("Recording failed", err, "ID", req.Id)
+		return err
 	} else {
 		logger.Infow("Recording finished", "ID", req.Id)
 	}
