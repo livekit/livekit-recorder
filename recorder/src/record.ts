@@ -162,8 +162,8 @@ function buildRecorderToken(room: string, key: string, secret: string): string {
 		ffmpeg.kill('SIGINT')
 		await browser.close()
 	}
-	process.on('SIGINT', stop)
-	process.on('SIGTERM', stop)
+	process.once('SIGINT', await stop)
+	process.once('SIGTERM', await stop)
 
 	// wait for END_RECORDING
 	page.on('console', async (msg) => {
