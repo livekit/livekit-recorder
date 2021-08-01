@@ -41,11 +41,10 @@ RUN apt-get install -y nodejs
 WORKDIR /app
 COPY recorder/package.json recorder/package-lock.json recorder/tsconfig.json ./
 COPY recorder/src ./src
-RUN npm install \
-    && npm install -g typescript
+RUN npm install
 
 # Silence error about livekit-server-sdk protos
-RUN tsc src/*.ts; exit 0
+RUN npx tsc src/*.ts; exit 0
 
 # Run the service
 WORKDIR /
