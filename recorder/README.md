@@ -9,9 +9,7 @@ output to a rtmp stream.
 It can be used standalone to make a single recording of any webpage, or it can be managed by our 
 [recorder service](https://github.com/livekit/livekit-recorder/tree/main/service).
 
-Once started, the recorder can be safely stopped by sending a `SIGINT` or by logging `END_RECORDING` to the console.
-
-## Recording Options
+## Recording
 
 ### Using templates
 
@@ -55,6 +53,16 @@ You can also save or stream any other webpage - just supply the url.
     }
 }
 ```
+
+### Ending a recording
+
+Once started, there are a number of ways to end the recording:
+* if not running in docker, `SIGINT` or `SIGTERM`
+* `docker stop <container>` if running the docker image
+* if using our templates, the recorder will stop automatically when the last participant leaves
+* if using your own webpage, logging `END_RECORDING` to the console
+
+With any of these methods, the recorder will stop ffmpeg and finish uploading before shutting down.
 
 ### Config
 

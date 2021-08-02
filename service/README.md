@@ -5,9 +5,13 @@
 The service listens to a redis subscription and waits for the LiveKit server to make a reservation. Once the reservation 
 is made to ensure availability, the service waits for a `START_RECORDING` signal from the server before launching the
 [recorder](https://github.com/livekit/livekit-recorder/tree/main/recorder). The recorder will be stopped by 
-either a `END_RECORDING` signal from the server, or when the room closes.
+either a `END_RECORDING` signal from the server, or automatically when the last participant leaves if using our templates.
 
 A single instance can record one room at a time.
+
+## Guides
+
+See guides and deployment docs at https://docs.livekit.io/guides/recording
 
 ## Config
 
@@ -40,7 +44,3 @@ output:
 log_level: valid levels are debug, info, warn, error, fatal, or panic (optional)
 
 ```
-
-## Deploying
-
-TBD
