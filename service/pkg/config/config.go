@@ -84,7 +84,7 @@ func (conf *Config) updateFromCLI(c *cli.Context) error {
 	return nil
 }
 
-func Merge(defaults *Config, req *livekit.RecordingReservation) (string, error) {
+func Merge(defaults *Config, res *livekit.RecordingReservation) (string, error) {
 	var m map[string]interface{}
 	if defaults.ApiKey != "" && defaults.ApiSecret != "" {
 		m = map[string]interface{}{
@@ -95,19 +95,20 @@ func Merge(defaults *Config, req *livekit.RecordingReservation) (string, error) 
 		m = make(map[string]interface{})
 	}
 
+	req := res.Request
 	switch input := req.Input.(type) {
-	case *livekit.RecordingReservation_Url:
+	case *livekit.StartRecordingRequest_Url:
 		m["input"] = map[string]interface{}{"url": input.Url}
-	case *livekit.RecordingReservation_Template:
+	case *livekit.StartRecordingRequest_Template:
 		m["input"] = map[string]interface{}{"template": input.Template}
 	}
 
 	switch output := req.Output.(type) {
-	case *livekit.RecordingReservation_File:
+	case *livekit.StartRecordingRequest_File:
 		m["output"] = map[string]interface{}{"file": output.File}
-	case *livekit.RecordingReservation_S3:
+	case *livekit.StartRecordingRequest_S3:
 		m["output"] = map[string]interface{}{"s3": output.S3}
-	case *livekit.RecordingReservation_Rtmp:
+	case *livekit.StartRecordingRequest_Rtmp:
 		m["output"] = map[string]interface{}{"rtmp": output.Rtmp}
 	}
 
