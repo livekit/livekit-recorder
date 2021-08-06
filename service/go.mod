@@ -3,7 +3,6 @@ module github.com/livekit/livekit-recorder/service
 go 1.16
 
 require (
-	github.com/fatih/structs v1.1.0
 	github.com/go-logr/logr v1.0.0
 	github.com/go-logr/zapr v1.0.0
 	github.com/go-redis/redis/v8 v8.11.0
@@ -17,3 +16,5 @@ require (
 	google.golang.org/protobuf v1.27.1
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 )
+
+replace github.com/livekit/protocol => ../../protocol
