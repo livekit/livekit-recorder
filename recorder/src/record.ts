@@ -67,7 +67,6 @@ function buildRecorderToken(room: string, key: string, secret: string): string {
 		throw Error('Input url or template required')
 	}
 	await page.goto(url, {waitUntil: "load"})
-	await new Promise(resolve => {setTimeout(resolve, 15000)})
 
 	// ffmpeg output options
 	let ffmpegOutputOpts = [
@@ -147,7 +146,6 @@ function buildRecorderToken(room: string, key: string, secret: string): string {
 		'-r', `${conf.options.framerate}`,
 		'-f', 'x11grab', '-i', `${xvfb.display()}.0`,
 
-		'-t', '30',
 		// output
 		...ffmpegOutputOpts, ...ffmpegOutput,
 	])
