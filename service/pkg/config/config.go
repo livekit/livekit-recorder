@@ -13,15 +13,15 @@ import (
 )
 
 type Config struct {
-	Redis      RedisConfig               `yaml:"redis" json:"-"`
+	Redis      RedisConfig               `yaml:"redis"`
 	ApiKey     string                    `yaml:"api_key"`
 	ApiSecret  string                    `yaml:"api_secret"`
 	WsUrl      string                    `yaml:"ws_url"`
 	S3         S3Config                  `yaml:"s3"`
-	HealthPort int                       `yaml:"health_port" json:"-"`
-	Options    *livekit.RecordingOptions `yaml:"options" json:"options"`
-	LogLevel   string                    `yaml:"log_level" json:"-"`
-	Test       bool                      `yaml:"-" json:"-"`
+	HealthPort int                       `yaml:"health_port"`
+	Options    *livekit.RecordingOptions `yaml:"options"`
+	LogLevel   string                    `yaml:"log_level"`
+	Test       bool                      `yaml:"-"`
 }
 
 type RedisConfig struct {
