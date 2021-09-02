@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	livekit "github.com/livekit/protocol/proto"
 	"github.com/livekit/protocol/utils"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 	"google.golang.org/protobuf/proto"
-
-	livekit "github.com/livekit/protocol/proto"
 
 	"github.com/livekit/livekit-recorder/service/pkg/config"
 	"github.com/livekit/livekit-recorder/service/pkg/logger"
