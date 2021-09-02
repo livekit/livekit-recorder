@@ -53,7 +53,10 @@ func InitializeWorker(conf *config.Config, bus utils.MessageBus) *Worker {
 func (w *Worker) Start() error {
 	logger.Debugw("Starting worker", "mock", w.mock)
 
-	reservations, _ := w.bus.Subscribe(context.Background(), utils.ReservationChannel)
+	reservations, err := w.bus.Subscribe(context.Background(), utils.ReservationChannel)
+	if err != nil {
+		return err
+	}
 	defer reservations.Close()
 
 	for {
