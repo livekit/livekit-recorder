@@ -119,10 +119,14 @@ func (w *Worker) Record(req *livekit.RecordingReservation) (res *livekit.Recordi
 	if err != nil {
 		return
 	}
+	defer start.Close()
+
 	stop, err := w.bus.Subscribe(w.ctx, utils.EndRecordingChannel(req.Id))
 	if err != nil {
 		return
 	}
+	defer stop.Close()
+
 	err = w.bus.Publish(w.ctx, utils.ReservationResponseChannel(req.Id), nil)
 	if err != nil {
 		return
@@ -130,7 +134,6 @@ func (w *Worker) Record(req *livekit.RecordingReservation) (res *livekit.Recordi
 
 	// send recording started message
 	<-start.Channel()
-	start.Close()
 	w.status.Store(Recording)
 
 	conf, err := config.Merge(w.defaults, req)
