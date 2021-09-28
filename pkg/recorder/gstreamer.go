@@ -2,6 +2,7 @@ package recorder
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/livekit/protocol/logger"
@@ -13,9 +14,10 @@ import (
 
 func LaunchGStreamer() error {
 	logger.Debugw("launching gstreamer")
+	_ = os.Setenv("GST_DEBUG", "3")
 
 	gst.Init(nil)
-	pipeline, err := pipelines.OGG()
+	pipeline, err := pipelines.MP4()
 	if err != nil {
 		return err
 	}
@@ -25,14 +27,13 @@ func LaunchGStreamer() error {
 	pipeline.GetPipelineBus().AddWatch(func(msg *gst.Message) bool {
 		switch msg.Type() {
 		case gst.MessageEOS:
-			pipeline.BlockSetState(gst.StateNull)
+			logger.Infow("EOS received")
+			_ = pipeline.BlockSetState(gst.StateNull)
+			logger.Infow("quitting")
 			loop.Quit()
 		case gst.MessageError:
-			err := msg.ParseError()
-			fmt.Println("ERROR:", err.Error())
-			if debug := err.DebugString(); debug != "" {
-				fmt.Println("DEBUG:", debug)
-			}
+			gErr := msg.ParseError()
+			logger.Errorw("message error", gErr, "debug", gErr.DebugString())
 			loop.Quit()
 		default:
 			fmt.Println(msg)
@@ -48,11 +49,11 @@ func LaunchGStreamer() error {
 
 	go func() {
 		time.Sleep(time.Second * 15)
-		loop.Quit()
+		logger.Infow("sending EOS")
+		pipeline.SendEvent(gst.NewEOSEvent())
 	}()
 
 	// Block and iterate on the main loop
 	loop.Run()
-
 	return nil
 }

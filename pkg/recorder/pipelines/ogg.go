@@ -8,7 +8,6 @@ import (
 
 // gst-launch-1.0 pulsesrc ! audioconvert ! vorbisenc ! oggmux ! filesink location=demo.ogg
 func OGG() (pipeline *gst.Pipeline, err error) {
-	// audio in
 	pulsesrc, err := gst.NewElement("pulsesrc")
 	if err != nil {
 		return
@@ -29,11 +28,11 @@ func OGG() (pipeline *gst.Pipeline, err error) {
 		return
 	}
 
-	filesink, err := gst.NewElement("filesink")
+	filesink, err := gst.NewElementWithName("filesink", "sink")
 	if err != nil {
 		return
 	}
-	err = filesink.Set("location", "demo.ogg")
+	err = filesink.Set("location", "/out/demo.ogg")
 	if err != nil {
 		return
 	}

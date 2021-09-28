@@ -36,6 +36,7 @@ func (r *Recorder) Start() error {
 		logger.Errorw("error launching gstreamer", err)
 		return err
 	}
+	logger.Infow("recording complete")
 
 	return nil
 }
