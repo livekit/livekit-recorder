@@ -3,10 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/go-logr/zapr"
 	"github.com/livekit/protocol/logger"
@@ -14,9 +11,8 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/livekit/livekit-recorder/service/pkg/config"
-	"github.com/livekit/livekit-recorder/service/pkg/service"
-	"github.com/livekit/livekit-recorder/service/version"
+	"github.com/livekit/livekit-recorder/pkg/config"
+	"github.com/livekit/livekit-recorder/version"
 )
 
 func main() {
@@ -40,7 +36,7 @@ func main() {
 				EnvVars: []string{"REDIS_HOST"},
 			},
 		},
-		Action:  runService,
+		Action:  runRecorder,
 		Version: version.Version,
 	}
 
@@ -71,46 +67,6 @@ func initLogger(level string) {
 	logger.SetLogger(zapr.NewLogger(l), "livekit-recorder")
 }
 
-func runService(c *cli.Context) error {
-	conf, err := getConfig(c)
-	if err != nil {
-		return err
-	}
-
-	initLogger(conf.LogLevel)
-
-	rc, err := service.NewMessageBus(conf)
-	if err != nil {
-		return err
-	}
-
-	worker := service.InitializeWorker(conf, rc)
-
-	if conf.HealthPort != 0 {
-		h := &handler{worker: worker}
-		go http.ListenAndServe(fmt.Sprintf(":%d", conf.HealthPort), h)
-	}
-
-	finishChan := make(chan os.Signal, 1)
-	signal.Notify(finishChan, syscall.SIGTERM, syscall.SIGQUIT)
-
-	stopChan := make(chan os.Signal, 1)
-	signal.Notify(stopChan, syscall.SIGINT)
-
-	go func() {
-		select {
-		case sig := <-finishChan:
-			logger.Infow("Exit requested, finishing recording then shutting down", "signal", sig)
-			worker.Stop(false)
-		case sig := <-stopChan:
-			logger.Infow("Exit requested, stopping recording and shutting down", "signal", sig)
-			worker.Stop(true)
-		}
-	}()
-
-	return worker.Start()
-}
-
 func getConfigString(c *cli.Context) (string, error) {
 	configFile := c.String("config")
 	configBody := c.String("config-body")
@@ -124,12 +80,4 @@ func getConfigString(c *cli.Context) (string, error) {
 		}
 	}
 	return configBody, nil
-}
-
-type handler struct {
-	worker *service.Worker
-}
-
-func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	_, _ = w.Write([]byte(h.worker.Status()))
 }

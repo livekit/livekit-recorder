@@ -11,15 +11,16 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/livekit/livekit-recorder/service/pkg/config"
+	"github.com/livekit/livekit-recorder/pkg/config"
+	"github.com/livekit/livekit-recorder/pkg/messaging"
 )
 
 func TestWorker(t *testing.T) {
 	conf := config.TestConfig()
-	rc, err := NewMessageBus(conf)
+	rc, err := messaging.NewMessageBus(conf)
 	require.NoError(t, err)
 
-	worker := InitializeWorker(conf, rc)
+	worker := InitializeService(conf, rc)
 	go func() {
 		err := worker.Start()
 		require.NoError(t, err)
@@ -66,7 +67,7 @@ func TestWorker(t *testing.T) {
 	})
 }
 
-func submit(t *testing.T, rc utils.MessageBus, worker *Worker) string {
+func submit(t *testing.T, rc utils.MessageBus, worker *Service) string {
 	// send recording reservation
 	req := &livekit.RecordingReservation{
 		SubmittedAt: time.Now().UnixNano(),

@@ -3,10 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
-	"os"
-	"os/exec"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	"github.com/livekit/protocol/logger"
@@ -14,10 +11,10 @@ import (
 	"github.com/livekit/protocol/utils"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/livekit/livekit-recorder/service/pkg/config"
+	"github.com/livekit/livekit-recorder/pkg/config"
 )
 
-type Worker struct {
+type Service struct {
 	ctx      context.Context
 	bus      utils.MessageBus
 	defaults *config.Config
@@ -31,14 +28,13 @@ type Worker struct {
 type Status string
 
 const (
-	Available    Status = "available"
-	Reserved     Status = "reserved"
-	Recording    Status = "recording"
-	lockDuration        = time.Second * 5
+	Available Status = "available"
+	Reserved  Status = "reserved"
+	Recording Status = "recording"
 )
 
-func InitializeWorker(conf *config.Config, bus utils.MessageBus) *Worker {
-	return &Worker{
+func InitializeService(conf *config.Config, bus utils.MessageBus) *Service {
+	return &Service{
 		ctx:      context.Background(),
 		bus:      bus,
 		defaults: conf,
@@ -49,10 +45,10 @@ func InitializeWorker(conf *config.Config, bus utils.MessageBus) *Worker {
 	}
 }
 
-func (w *Worker) Start() error {
+func (w *Service) Start() error {
 	logger.Debugw("Starting worker", "mock", w.mock)
 
-	reservations, err := w.bus.Subscribe(context.Background(), utils.ReservationChannel)
+	reservations, err := w.bus.SubscribeQueue(context.Background(), utils.ReservationChannel)
 	if err != nil {
 		return err
 	}
@@ -81,15 +77,6 @@ func (w *Worker) Start() error {
 				continue
 			}
 
-			claimed, err := w.bus.Lock(w.ctx, w.getKey(req.Id), lockDuration)
-			if err != nil {
-				logger.Errorw("Request failed", err, "ID", req.Id)
-				return err
-			} else if !claimed {
-				logger.Debugw("Request already claimed", "ID", req.Id)
-				continue
-			}
-
 			w.status.Store(Reserved)
 			logger.Debugw("Request claimed", "ID", req.Id)
 
@@ -103,7 +90,7 @@ func (w *Worker) Start() error {
 	}
 }
 
-func (w *Worker) Record(req *livekit.RecordingReservation) (res *livekit.RecordingResult, err error) {
+func (w *Service) Record(req *livekit.RecordingReservation) (res *livekit.RecordingResult, err error) {
 	res = &livekit.RecordingResult{Id: req.Id}
 	var startedAt time.Time
 	defer func() {
@@ -136,60 +123,44 @@ func (w *Worker) Record(req *livekit.RecordingReservation) (res *livekit.Recordi
 	<-start.Channel()
 	w.status.Store(Recording)
 
-	conf, err := config.Merge(w.defaults, req)
-	if err != nil {
-		return
-	}
+	// conf, err := config.Merge(w.defaults, req)
+	// if err != nil {
+	// 	return
+	// }
 
 	// Launch node recorder
-	var cmd *exec.Cmd
-	logger.Debugw("Launching recorder", "ID", req.Id)
-	if w.mock {
-		cmd = exec.Command("sleep", "3")
-	} else {
-		cmd = exec.Command("node", "app/src/record.js")
-		cmd.Env = append(cmd.Env, fmt.Sprintf("LIVEKIT_RECORDER_CONFIG=%s", conf))
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-	}
+	// done, err := recorder.StartRecording(req.Request)
+	// if err != nil {
+	// 	return
+	// }
+	// startedAt = time.Now()
+	// logger.Infow("Recording started", "ID", req.Id)
 
-	err = cmd.Start()
-	if err != nil {
-		return
-	}
-	startedAt = time.Now()
-	logger.Infow("Recording started", "ID", req.Id)
-
-	done := make(chan error, 1)
-	go func() {
-		done <- cmd.Wait()
-	}()
-
-	select {
-	case err = <-done:
-		break
-	case <-stop.Channel():
-		logger.Infow("Recording stopped by livekit server", "ID", req.Id)
-		err = cmd.Process.Signal(syscall.SIGTERM)
-	case <-w.kill:
-		logger.Infow("Recording stopped by recording service interrupt", "ID", req.Id)
-		err = cmd.Process.Signal(syscall.SIGTERM)
-	}
+	// select {
+	// case err = <-done:
+	// 	break
+	// case <-stop.Channel():
+	// 	logger.Infow("Recording stopped by livekit server", "ID", req.Id)
+	// 	err = cmd.Process.Signal(syscall.SIGTERM)
+	// case <-w.kill:
+	// 	logger.Infow("Recording stopped by recording service interrupt", "ID", req.Id)
+	// 	err = cmd.Process.Signal(syscall.SIGTERM)
+	// }
 
 	return
 }
 
-func (w *Worker) Status() Status {
+func (w *Service) Status() Status {
 	return w.status.Load().(Status)
 }
 
-func (w *Worker) Stop(kill bool) {
+func (w *Service) Stop(kill bool) {
 	w.shutdown <- struct{}{}
 	if kill {
 		w.kill <- struct{}{}
 	}
 }
 
-func (w *Worker) getKey(id string) string {
+func (w *Service) getKey(id string) string {
 	return fmt.Sprintf("recording-lock-%s", id)
 }

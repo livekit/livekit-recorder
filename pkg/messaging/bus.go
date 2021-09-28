@@ -1,4 +1,4 @@
-package service
+package messaging
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"github.com/livekit/protocol/utils"
 	"github.com/pkg/errors"
 
-	"github.com/livekit/livekit-recorder/service/pkg/config"
+	"github.com/livekit/livekit-recorder/pkg/config"
 )
 
 func NewMessageBus(conf *config.Config) (utils.MessageBus, error) {
