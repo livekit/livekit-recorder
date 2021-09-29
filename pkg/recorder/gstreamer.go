@@ -9,7 +9,7 @@ import (
 	"github.com/tinyzimmer/go-glib/glib"
 	"github.com/tinyzimmer/go-gst/gst"
 
-	"github.com/livekit/livekit-recorder/pkg/recorder/pipelines"
+	"github.com/livekit/livekit-recorder/pkg/pipeline"
 )
 
 func LaunchGStreamer() error {
@@ -17,18 +17,18 @@ func LaunchGStreamer() error {
 	_ = os.Setenv("GST_DEBUG", "3")
 
 	gst.Init(nil)
-	pipeline, err := pipelines.MP4()
+	p, err := pipeline.RTMP()
 	if err != nil {
 		return err
 	}
 
 	// run
 	loop := glib.NewMainLoop(glib.MainContextDefault(), false)
-	pipeline.GetPipelineBus().AddWatch(func(msg *gst.Message) bool {
+	p.GetPipelineBus().AddWatch(func(msg *gst.Message) bool {
 		switch msg.Type() {
 		case gst.MessageEOS:
 			logger.Infow("EOS received")
-			_ = pipeline.BlockSetState(gst.StateNull)
+			_ = p.BlockSetState(gst.StateNull)
 			logger.Infow("quitting")
 			loop.Quit()
 		case gst.MessageError:
@@ -42,15 +42,15 @@ func LaunchGStreamer() error {
 	})
 
 	// Start the pipeline
-	err = pipeline.SetState(gst.StatePlaying)
+	err = p.SetState(gst.StatePlaying)
 	if err != nil {
 		return err
 	}
 
 	go func() {
-		time.Sleep(time.Second * 15)
+		time.Sleep(time.Minute * 3)
 		logger.Infow("sending EOS")
-		pipeline.SendEvent(gst.NewEOSEvent())
+		p.SendEvent(gst.NewEOSEvent())
 	}()
 
 	// Block and iterate on the main loop

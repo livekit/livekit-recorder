@@ -1,4 +1,4 @@
-package pipelines
+package pipeline
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"github.com/tinyzimmer/go-gst/gst"
 )
 
-func MP4() (pipeline *gst.Pipeline, err error) {
+func RTMP() (pipeline *gst.Pipeline, err error) {
 	// audio elements
 	pulsesrc, err := gst.NewElement("pulsesrc")
 	if err != nil {
@@ -55,16 +55,16 @@ func MP4() (pipeline *gst.Pipeline, err error) {
 		return
 	}
 
-	mp4mux, err := gst.NewElement("mp4mux")
+	flvmux, err := gst.NewElement("flvmux")
 	if err != nil {
 		return
 	}
 
-	filesink, err := gst.NewElement("filesink")
+	rtmpsink, err := gst.NewElement("rtmpsink")
 	if err != nil {
 		return
 	}
-	err = filesink.Set("location", "/out/demo.mp4")
+	err = rtmpsink.Set("location", "rtmp://sfo.contribute.live-video.net/app/{stream_id} live=1")
 	if err != nil {
 		return
 	}
@@ -77,7 +77,7 @@ func MP4() (pipeline *gst.Pipeline, err error) {
 	err = pipeline.AddMany(
 		ximagesrc, videoconvert, x264enc, videoqueue,
 		pulsesrc, audioconvert, faac, audioqueue,
-		mp4mux, filesink,
+		flvmux, rtmpsink,
 	)
 	if err != nil {
 		return
@@ -92,17 +92,17 @@ func MP4() (pipeline *gst.Pipeline, err error) {
 	if err != nil {
 		return
 	}
-	err = mp4mux.Link(filesink)
+	err = flvmux.Link(rtmpsink)
 	if err != nil {
 		return
 	}
 
 	// link pads
-	if link := audioqueue.GetStaticPad("src").Link(mp4mux.GetRequestPad("audio_%u")); link != gst.PadLinkOK {
+	if link := audioqueue.GetStaticPad("src").Link(flvmux.GetRequestPad("audio")); link != gst.PadLinkOK {
 		err = fmt.Errorf("pad link: %s", link.String())
 		return
 	}
-	if link := videoqueue.GetStaticPad("src").Link(mp4mux.GetRequestPad("video_%u")); link != gst.PadLinkOK {
+	if link := videoqueue.GetStaticPad("src").Link(flvmux.GetRequestPad("video")); link != gst.PadLinkOK {
 		err = fmt.Errorf("pad link: %s", link.String())
 		return
 	}

@@ -25,7 +25,7 @@ func (r *Recorder) Start() error {
 		return err
 	}
 
-	err = r.LaunchChrome("https://www.youtube.com/watch?v=v4I-19YAi2A", 1920, 1080)
+	err = r.LaunchChrome("https://www.youtube.com/watch?v=m4cgLL8JaVI", 1920, 1080)
 	if err != nil {
 		logger.Errorw("error launching chrome", err)
 		return err
