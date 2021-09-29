@@ -3,7 +3,6 @@ package recorder
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/livekit/protocol/logger"
 	"github.com/tinyzimmer/go-glib/glib"
@@ -13,7 +12,7 @@ import (
 )
 
 // TODO: bitrates, audio frequency, scaling, GPU, error handling
-func RunGStreamer(location string) error {
+func (r *Recorder) RunGStreamer(location string) error {
 	logger.Debugw("launching gstreamer")
 	_ = os.Setenv("GST_DEBUG", "3")
 
@@ -23,6 +22,7 @@ func RunGStreamer(location string) error {
 	if err != nil {
 		return err
 	}
+	r.pipeline = p
 
 	// message watch
 	loop := glib.NewMainLoop(glib.MainContextDefault(), false)
@@ -49,13 +49,8 @@ func RunGStreamer(location string) error {
 		return err
 	}
 
-	go func() {
-		time.Sleep(time.Minute * 3)
-		logger.Infow("sending EOS")
-		p.SendEvent(gst.NewEOSEvent())
-	}()
-
 	// Block and iterate on the main loop
+	r.running.Store(true)
 	loop.Run()
 	return nil
 }

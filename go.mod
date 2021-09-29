@@ -15,6 +15,7 @@ require (
 	github.com/tinyzimmer/go-glib v0.0.24
 	github.com/tinyzimmer/go-gst v0.2.30
 	github.com/urfave/cli/v2 v2.3.0
+	go.uber.org/atomic v1.7.0
 	go.uber.org/zap v1.18.1
 	golang.org/x/sys v0.0.0-20210927094055-39ccf1dd6fa6 // indirect
 	google.golang.org/protobuf v1.27.1

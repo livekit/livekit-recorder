@@ -11,20 +11,19 @@ import (
 
 const Display = ":99"
 
-func (r *Recorder) LaunchXvfb(width, height, depth int) error {
+func (r *Recorder) LaunchXvfb(width, height, depth int) (*exec.Cmd, error) {
 	logger.Debugw("launching xvfb")
 
 	dims := fmt.Sprintf("%dx%dx%d", width, height, depth)
-	cmd := exec.Command("Xvfb", Display, "-screen", "0", dims, "-ac", "-nolisten", "tcp")
-	if err := cmd.Start(); err != nil {
-		return err
+	xvfb := exec.Command("Xvfb", Display, "-screen", "0", dims, "-ac", "-nolisten", "tcp")
+	if err := xvfb.Start(); err != nil {
+		return nil, err
 	}
 
-	r.xvfb = cmd
-	return nil
+	return xvfb, nil
 }
 
-func (r *Recorder) LaunchChrome(url string, width, height int) error {
+func (r *Recorder) LaunchChrome(url string, width, height int) (func(), error) {
 	logger.Debugw("launching chrome")
 
 	opts := []chromedp.ExecAllocatorOption{
@@ -66,10 +65,9 @@ func (r *Recorder) LaunchChrome(url string, width, height int) error {
 		chromedp.Flag("display", Display),
 	}
 
-	ctx, _ := chromedp.NewExecAllocator(context.Background(), opts...)
-	r.chromeCtx, r.chromeCancel = chromedp.NewContext(ctx)
-
-	return chromedp.Run(r.chromeCtx,
+	allocCtx, _ := chromedp.NewExecAllocator(context.Background(), opts...)
+	ctx, cancel := chromedp.NewContext(allocCtx)
+	return cancel, chromedp.Run(ctx,
 		chromedp.Navigate(url),
 		// TODO: wait?
 	)
