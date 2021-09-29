@@ -26,8 +26,10 @@ func runService(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-
-	svc := service.InitializeService(conf, rc)
+	svc, err := service.NewService(conf, rc)
+	if err != nil {
+		return err
+	}
 
 	if conf.HealthPort != 0 {
 		go http.ListenAndServe(fmt.Sprintf(":%d", conf.HealthPort), &handler{svc: svc})

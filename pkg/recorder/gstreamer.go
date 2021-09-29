@@ -12,6 +12,7 @@ import (
 	"github.com/livekit/livekit-recorder/pkg/pipeline"
 )
 
+// TODO: bitrates, audio frequency, scaling, GPU, error handling
 func RunGStreamer(location string) error {
 	logger.Debugw("launching gstreamer")
 	_ = os.Setenv("GST_DEBUG", "3")

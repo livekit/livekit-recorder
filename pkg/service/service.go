@@ -12,12 +12,13 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/livekit/livekit-recorder/pkg/config"
+	"github.com/livekit/livekit-recorder/pkg/recorder"
 )
 
 type Service struct {
+	rec      *recorder.Recorder
 	ctx      context.Context
 	bus      utils.MessageBus
-	defaults *config.Config
 	status   atomic.Value // Status
 	shutdown chan struct{}
 	kill     chan struct{}
@@ -33,16 +34,21 @@ const (
 	Recording Status = "recording"
 )
 
-func InitializeService(conf *config.Config, bus utils.MessageBus) *Service {
+func NewService(conf *config.Config, bus utils.MessageBus) (*Service, error) {
+	rec, err := recorder.NewRecorder(conf)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Service{
+		rec:      rec,
 		ctx:      context.Background(),
 		bus:      bus,
-		defaults: conf,
 		status:   atomic.Value{},
 		shutdown: make(chan struct{}, 1),
 		kill:     make(chan struct{}, 1),
 		mock:     conf.Test,
-	}
+	}, nil
 }
 
 func (w *Service) Start() error {

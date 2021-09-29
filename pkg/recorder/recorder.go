@@ -4,13 +4,17 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
 	"os/exec"
 
 	"github.com/livekit/protocol/logger"
 	livekit "github.com/livekit/protocol/proto"
+
+	"github.com/livekit/livekit-recorder/pkg/config"
 )
 
 type Recorder struct {
+	conf         *config.Config
 	xvfb         *exec.Cmd
 	chromeCtx    context.Context
 	chromeCancel func()
@@ -20,15 +24,19 @@ type Recorder struct {
 	wsUrl     string
 }
 
-func NewRecorder(apiKey, apiSecret, wsUrl string) *Recorder {
-	return &Recorder{
-		apiKey:    apiKey,
-		apiSecret: apiSecret,
-		wsUrl:     wsUrl,
+func NewRecorder(conf *config.Config) (*Recorder, error) {
+	if err := os.Setenv("DISPLAY", Display); err != nil {
+		return nil, err
 	}
+
+	return &Recorder{
+		conf: conf,
+	}, nil
 }
 
 func (r *Recorder) Start(req *livekit.StartRecordingRequest) error {
+	config.UpdateRequestParams(r.conf, req)
+
 	width := int(req.Options.InputWidth)
 	height := int(req.Options.InputHeight)
 	err := r.LaunchXvfb(width, height, int(req.Options.Depth))

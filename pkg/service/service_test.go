@@ -20,50 +20,50 @@ func TestWorker(t *testing.T) {
 	rc, err := messaging.NewMessageBus(conf)
 	require.NoError(t, err)
 
-	worker := InitializeService(conf, rc)
+	svc, err := NewService(conf, rc)
+	require.NoError(t, err)
 	go func() {
-		err := worker.Start()
-		require.NoError(t, err)
+		require.NoError(t, svc.Start())
 	}()
 
 	// wait for worker to start
 	time.Sleep(time.Millisecond * 100)
 
 	t.Run("Submit", func(t *testing.T) {
-		require.Equal(t, Available, worker.Status())
-		submit(t, rc, worker)
+		require.Equal(t, Available, svc.Status())
+		submit(t, rc, svc)
 		// wait to finish
 		time.Sleep(time.Millisecond * 3100)
-		require.Equal(t, Available, worker.Status())
+		require.Equal(t, Available, svc.Status())
 	})
 
 	t.Run("Reserved", func(t *testing.T) {
-		require.Equal(t, Available, worker.Status())
-		submit(t, rc, worker)
+		require.Equal(t, Available, svc.Status())
+		submit(t, rc, svc)
 		submitReserved(t, rc)
 		// wait to finish
 		time.Sleep(time.Millisecond * 3100)
-		require.Equal(t, Available, worker.Status())
+		require.Equal(t, Available, svc.Status())
 	})
 
 	t.Run("Stop", func(t *testing.T) {
-		require.Equal(t, Available, worker.Status())
-		id := submit(t, rc, worker)
+		require.Equal(t, Available, svc.Status())
+		id := submit(t, rc, svc)
 		// server ends recording
 		require.NoError(t, rc.Publish(context.Background(), utils.EndRecordingChannel(id), nil))
 		time.Sleep(time.Millisecond * 50)
 		// check that recording has ended early
-		require.Equal(t, Available, worker.Status())
+		require.Equal(t, Available, svc.Status())
 	})
 
 	t.Run("Kill", func(t *testing.T) {
-		require.Equal(t, Available, worker.Status())
-		submit(t, rc, worker)
+		require.Equal(t, Available, svc.Status())
+		submit(t, rc, svc)
 		// worker is killed
-		worker.Stop(true)
+		svc.Stop(true)
 		time.Sleep(time.Millisecond * 50)
 		// check that recording has ended early
-		require.Equal(t, Available, worker.Status())
+		require.Equal(t, Available, svc.Status())
 	})
 }
 
