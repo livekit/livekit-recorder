@@ -12,17 +12,18 @@ import (
 	"github.com/livekit/livekit-recorder/pkg/pipeline"
 )
 
-func LaunchGStreamer() error {
+func RunGStreamer(location string) error {
 	logger.Debugw("launching gstreamer")
 	_ = os.Setenv("GST_DEBUG", "3")
 
+	// build pipeline
 	gst.Init(nil)
-	p, err := pipeline.RTMP()
+	p, err := pipeline.NewPipeline(location)
 	if err != nil {
 		return err
 	}
 
-	// run
+	// message watch
 	loop := glib.NewMainLoop(glib.MainContextDefault(), false)
 	p.GetPipelineBus().AddWatch(func(msg *gst.Message) bool {
 		switch msg.Type() {
@@ -41,7 +42,7 @@ func LaunchGStreamer() error {
 		return true
 	})
 
-	// Start the pipeline
+	// start playing
 	err = p.SetState(gst.StatePlaying)
 	if err != nil {
 		return err
