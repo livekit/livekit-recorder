@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/livekit/protocol/auth"
@@ -20,6 +21,7 @@ import (
 type Recorder struct {
 	conf *config.Config
 
+	filename     string
 	xvfb         *exec.Cmd
 	chromeCancel func()
 	pipeline     *gst.Pipeline
@@ -36,6 +38,16 @@ func (r *Recorder) Init(req *livekit.StartRecordingRequest) error {
 	config.UpdateRequestParams(r.conf, req)
 	width := int(req.Options.InputWidth)
 	height := int(req.Options.InputHeight)
+
+	if s3, ok := req.Output.(*livekit.StartRecordingRequest_S3Url); ok {
+		idx := strings.LastIndex(s3.S3Url, "/")
+		if idx < 6 ||
+			!strings.HasPrefix(s3.S3Url, "s3://") ||
+			!strings.HasSuffix(s3.S3Url, ".mp4") {
+			return errors.New("malformed s3 url, should be s3://bucket/{path/to/}filename.mp4")
+		}
+		r.filename = s3.S3Url[idx+1:]
+	}
 
 	// Xvfb
 	xvfb, err := r.launchXvfb(width, height, int(req.Options.Depth))
@@ -73,17 +85,22 @@ func (r *Recorder) Run(recordingId string, req *livekit.StartRecordingRequest) *
 	}
 
 	if s3, ok := req.Output.(*livekit.StartRecordingRequest_S3Url); ok {
-		// TODO: upload
-		res.DownloadUrl = s3.S3Url
+		if err = r.upload(s3.S3Url); err != nil {
+			res.Error = err.Error()
+		} else {
+			res.DownloadUrl = s3.S3Url
+		}
 	}
 
 	return res
 }
 
+// TODO
 func (r *Recorder) AddOutput(rtmp string) error {
 	return nil
 }
 
+// TODO
 func (r *Recorder) RemoveOutput(rtmp string) error {
 	return nil
 }

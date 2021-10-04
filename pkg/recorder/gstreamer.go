@@ -11,13 +11,21 @@ import (
 	"github.com/livekit/livekit-recorder/pkg/pipeline"
 )
 
-// TODO: error handling, GPU support
+// TODO: better error handling, split pipelines, GPU support
 func (r *Recorder) runGStreamer(req *livekit.StartRecordingRequest) error {
 	logger.Debugw("launching gstreamer")
 
 	// build pipeline
 	gst.Init(nil)
-	p, err := pipeline.NewPipeline("TODO")
+
+	var p *gst.Pipeline
+	var err error
+	switch req.Output.(type) {
+	case *livekit.StartRecordingRequest_Rtmp:
+		p, err = pipeline.NewRtmpPipeline(req.Output.(*livekit.StartRecordingRequest_Rtmp).Rtmp.Urls)
+	case *livekit.StartRecordingRequest_S3Url:
+		p, err = pipeline.NewFilePipeline(r.filename)
+	}
 	if err != nil {
 		return err
 	}

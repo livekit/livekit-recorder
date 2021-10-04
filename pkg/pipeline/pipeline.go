@@ -6,18 +6,29 @@ import (
 	"github.com/tinyzimmer/go-gst/gst"
 )
 
-func NewPipeline(location string) (*gst.Pipeline, error) {
+func NewRtmpPipeline(rtmp []string) (*gst.Pipeline, error) {
+	output, err := getRtmpOutput(rtmp)
+	if err != nil {
+		return nil, err
+	}
+	return newPipeline(output)
+}
+
+func NewFilePipeline(filename string) (*gst.Pipeline, error) {
+	output, err := getFileOutput(filename)
+	if err != nil {
+		return nil, err
+	}
+	return newPipeline(output)
+}
+
+func newPipeline(output *Output) (*gst.Pipeline, error) {
 	audioSource, err := getAudioSource()
 	if err != nil {
 		return nil, err
 	}
 
 	videoSource, err := getVideoSource()
-	if err != nil {
-		return nil, err
-	}
-
-	output, err := getOutput(location)
 	if err != nil {
 		return nil, err
 	}
