@@ -15,6 +15,7 @@ func (s *AudioSource) GetSourcePad() *gst.Pad {
 	return s.srcElement.GetStaticPad("src")
 }
 
+// TODO: bitrate and frequency
 func getAudioSource() (*AudioSource, error) {
 	pulseSrc, err := gst.NewElement("pulsesrc")
 	if err != nil {

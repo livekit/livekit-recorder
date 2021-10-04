@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+
 	"github.com/urfave/cli/v2"
 
 	"github.com/livekit/livekit-recorder/pkg/recorder"
@@ -18,10 +20,10 @@ func runRecorder(c *cli.Context) error {
 
 	initLogger(conf.LogLevel)
 
-	rec, err := recorder.NewRecorder(conf)
-	if err != nil {
-		return err
+	rec := recorder.NewRecorder(conf)
+	res := rec.Run("", req)
+	if res.Error == "" {
+		return nil
 	}
-
-	return rec.Start(req)
+	return errors.New(res.Error)
 }

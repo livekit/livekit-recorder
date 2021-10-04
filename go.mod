@@ -8,7 +8,7 @@ require (
 	github.com/go-logr/zapr v1.0.0
 	github.com/go-redis/redis/v8 v8.11.3
 	github.com/livekit/livekit-recorder/service v0.0.0-20210921233535-db02598d5a2e
-	github.com/livekit/protocol v0.9.3
+	github.com/livekit/protocol v0.9.6-0.20211004202057-dd31c5c6a7c9
 	github.com/magefile/mage v1.11.0
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0

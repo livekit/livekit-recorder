@@ -15,6 +15,7 @@ func (s *VideoSource) GetSourcePad() *gst.Pad {
 	return s.srcElement.GetStaticPad("src")
 }
 
+// TODO: scaling
 func getVideoSource() (*VideoSource, error) {
 	xImageSrc, err := gst.NewElement("ximagesrc")
 	if err != nil {

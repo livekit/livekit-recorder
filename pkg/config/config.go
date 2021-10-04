@@ -2,22 +2,26 @@ package config
 
 import (
 	"fmt"
+	"os"
 
 	"gopkg.in/yaml.v3"
 
 	livekit "github.com/livekit/protocol/proto"
 )
 
+const Display = ":99"
+
 type Config struct {
-	Redis      RedisConfig               `yaml:"redis"`
-	ApiKey     string                    `yaml:"api_key"`
-	ApiSecret  string                    `yaml:"api_secret"`
-	WsUrl      string                    `yaml:"ws_url"`
-	S3         S3Config                  `yaml:"s3"`
-	HealthPort int                       `yaml:"health_port"`
-	Options    *livekit.RecordingOptions `yaml:"options"`
-	LogLevel   string                    `yaml:"log_level"`
-	Test       bool                      `yaml:"-"`
+	ApiKey      string                    `yaml:"api_key"`
+	ApiSecret   string                    `yaml:"api_secret"`
+	WsUrl       string                    `yaml:"ws_url"`
+	HealthPort  int                       `yaml:"health_port"`
+	LogLevel    string                    `yaml:"log_level"`
+	GstLogLevel string                    `yaml:"gst_log_level"`
+	Defaults    *livekit.RecordingOptions `yaml:"defaults"`
+	Redis       RedisConfig               `yaml:"redis"`
+	S3          S3Config                  `yaml:"s3"`
+	Test        bool                      `yaml:"-"`
 }
 
 type RedisConfig struct {
@@ -35,8 +39,9 @@ type S3Config struct {
 func NewConfig(confString string) (*Config, error) {
 	// start with defaults
 	conf := &Config{
-		LogLevel: "debug",
-		Options: &livekit.RecordingOptions{
+		LogLevel:    "debug",
+		GstLogLevel: "3",
+		Defaults: &livekit.RecordingOptions{
 			InputWidth:     1920,
 			InputHeight:    1080,
 			Depth:          24,
@@ -54,8 +59,15 @@ func NewConfig(confString string) (*Config, error) {
 	}
 
 	// apply preset options
-	if conf.Options.Preset != livekit.RecordingPreset_NONE {
-		conf.Options = fromPreset(conf.Options.Preset)
+	if conf.Defaults.Preset != livekit.RecordingPreset_NONE {
+		conf.Defaults = fromPreset(conf.Defaults.Preset)
+	}
+
+	if err := os.Setenv("DISPLAY", Display); err != nil {
+		return nil, err
+	}
+	if err := os.Setenv("GST_DEBUG", conf.GstLogLevel); err != nil {
+		return nil, err
 	}
 
 	return conf, nil
@@ -66,7 +78,7 @@ func TestConfig() *Config {
 		Redis: RedisConfig{
 			Address: "localhost:6379",
 		},
-		Options: &livekit.RecordingOptions{
+		Defaults: &livekit.RecordingOptions{
 			InputWidth:     1920,
 			InputHeight:    1080,
 			Depth:          24,
@@ -86,23 +98,23 @@ func UpdateRequestParams(conf *Config, req *livekit.StartRecordingRequest) {
 	}
 
 	if req.Options.InputWidth == 0 || req.Options.InputHeight == 0 {
-		req.Options.InputWidth = conf.Options.InputHeight
-		req.Options.InputHeight = conf.Options.InputWidth
+		req.Options.InputWidth = conf.Defaults.InputHeight
+		req.Options.InputHeight = conf.Defaults.InputWidth
 	}
 	if req.Options.Depth == 0 {
-		req.Options.Depth = conf.Options.Depth
+		req.Options.Depth = conf.Defaults.Depth
 	}
 	if req.Options.Framerate == 0 {
-		req.Options.Framerate = conf.Options.Framerate
+		req.Options.Framerate = conf.Defaults.Framerate
 	}
 	if req.Options.AudioBitrate == 0 {
-		req.Options.AudioBitrate = conf.Options.AudioBitrate
+		req.Options.AudioBitrate = conf.Defaults.AudioBitrate
 	}
 	if req.Options.AudioFrequency == 0 {
-		req.Options.AudioFrequency = conf.Options.AudioFrequency
+		req.Options.AudioFrequency = conf.Defaults.AudioFrequency
 	}
 	if req.Options.VideoBitrate == 0 {
-		req.Options.VideoBitrate = conf.Options.VideoBitrate
+		req.Options.VideoBitrate = conf.Defaults.VideoBitrate
 	}
 
 	return

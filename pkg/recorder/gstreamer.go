@@ -2,23 +2,22 @@ package recorder
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/livekit/protocol/logger"
+	livekit "github.com/livekit/protocol/proto"
 	"github.com/tinyzimmer/go-glib/glib"
 	"github.com/tinyzimmer/go-gst/gst"
 
 	"github.com/livekit/livekit-recorder/pkg/pipeline"
 )
 
-// TODO: bitrates, audio frequency, scaling, GPU, error handling
-func (r *Recorder) RunGStreamer(location string) error {
+// TODO: error handling, GPU support
+func (r *Recorder) runGStreamer(req *livekit.StartRecordingRequest) error {
 	logger.Debugw("launching gstreamer")
-	_ = os.Setenv("GST_DEBUG", "3")
 
 	// build pipeline
 	gst.Init(nil)
-	p, err := pipeline.NewPipeline(location)
+	p, err := pipeline.NewPipeline("TODO")
 	if err != nil {
 		return err
 	}
@@ -31,7 +30,7 @@ func (r *Recorder) RunGStreamer(location string) error {
 		case gst.MessageEOS:
 			logger.Infow("EOS received")
 			_ = p.BlockSetState(gst.StateNull)
-			logger.Infow("quitting")
+			logger.Infow("pipeline stopped")
 			loop.Quit()
 		case gst.MessageError:
 			gErr := msg.ParseError()
@@ -50,7 +49,6 @@ func (r *Recorder) RunGStreamer(location string) error {
 	}
 
 	// Block and iterate on the main loop
-	r.running.Store(true)
 	loop.Run()
 	return nil
 }

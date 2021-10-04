@@ -7,15 +7,15 @@ import (
 
 	"github.com/chromedp/chromedp"
 	"github.com/livekit/protocol/logger"
+
+	"github.com/livekit/livekit-recorder/pkg/config"
 )
 
-const Display = ":99"
-
-func (r *Recorder) LaunchXvfb(width, height, depth int) (*exec.Cmd, error) {
+func (r *Recorder) launchXvfb(width, height, depth int) (*exec.Cmd, error) {
 	logger.Debugw("launching xvfb")
 
 	dims := fmt.Sprintf("%dx%dx%d", width, height, depth)
-	xvfb := exec.Command("Xvfb", Display, "-screen", "0", dims, "-ac", "-nolisten", "tcp")
+	xvfb := exec.Command("Xvfb", config.Display, "-screen", "0", dims, "-ac", "-nolisten", "tcp")
 	if err := xvfb.Start(); err != nil {
 		return nil, err
 	}
@@ -23,7 +23,7 @@ func (r *Recorder) LaunchXvfb(width, height, depth int) (*exec.Cmd, error) {
 	return xvfb, nil
 }
 
-func (r *Recorder) LaunchChrome(url string, width, height int) (func(), error) {
+func (r *Recorder) launchChrome(url string, width, height int) (func(), error) {
 	logger.Debugw("launching chrome")
 
 	opts := []chromedp.ExecAllocatorOption{
@@ -62,13 +62,10 @@ func (r *Recorder) LaunchChrome(url string, width, height int) (func(), error) {
 		chromedp.Flag("enable-automation", false),
 		chromedp.Flag("autoplay-policy", "no-user-gesture-required"),
 		chromedp.Flag("window-position", "0,0"),
-		chromedp.Flag("display", Display),
+		chromedp.Flag("display", config.Display),
 	}
 
 	allocCtx, _ := chromedp.NewExecAllocator(context.Background(), opts...)
 	ctx, cancel := chromedp.NewContext(allocCtx)
-	return cancel, chromedp.Run(ctx,
-		chromedp.Navigate(url),
-		// TODO: wait?
-	)
+	return cancel, chromedp.Run(ctx, chromedp.Navigate(url))
 }
