@@ -34,6 +34,7 @@ type RedisConfig struct {
 type S3Config struct {
 	AccessKey string `yaml:"access_key"`
 	Secret    string `yaml:"secret"`
+	Region    string `yaml:"region"`
 }
 
 func NewConfig(confString string) (*Config, error) {

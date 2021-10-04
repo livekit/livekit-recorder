@@ -6,12 +6,20 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 )
 
 func (r *Recorder) upload(s3Url string) error {
-	sess, err := session.NewSession()
+	sess, err := session.NewSession(&aws.Config{
+		Credentials: credentials.NewStaticCredentials(
+			r.conf.S3.AccessKey,
+			r.conf.S3.Secret,
+			"",
+		),
+		Region: aws.String(r.conf.S3.Region),
+	})
 	if err != nil {
 		return err
 	}
