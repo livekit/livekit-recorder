@@ -40,7 +40,7 @@ type modInfo struct {
 
 // run unit tests
 func Test() error {
-	cmd := exec.Command("go", "test", "./...")
+	cmd := exec.Command("go", "test", "--tags=test", "./...")
 	connectStd(cmd)
 	return cmd.Run()
 }

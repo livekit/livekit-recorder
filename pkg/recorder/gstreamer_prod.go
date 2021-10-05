@@ -1,4 +1,4 @@
-//+build linux
+// +build !test
 
 package recorder
 
@@ -39,7 +39,7 @@ func (r *Recorder) runGStreamer(req *livekit.StartRecordingRequest) error {
 	if err != nil {
 		return err
 	}
-	r.pipeline = p
+	r.pipeline = &Pipeline{p}
 
 	// message watch
 	loop := glib.NewMainLoop(glib.MainContextDefault(), false)
