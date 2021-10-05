@@ -1,3 +1,5 @@
+// +build !test
+
 package pipeline
 
 import "github.com/tinyzimmer/go-gst/gst"

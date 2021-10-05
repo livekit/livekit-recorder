@@ -1,6 +1,6 @@
 // +build mage
 
-package livekit_recorder
+package main
 
 import (
 	"crypto/sha1"
