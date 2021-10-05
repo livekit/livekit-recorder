@@ -35,6 +35,7 @@ func (r *Recorder) runGStreamer(req *livekit.StartRecordingRequest) error {
 	case *livekit.StartRecordingRequest_Rtmp:
 		p, err = pipeline.NewRtmpPipeline(req.Output.(*livekit.StartRecordingRequest_Rtmp).Rtmp.Urls)
 	case *livekit.StartRecordingRequest_S3Url:
+	case *livekit.StartRecordingRequest_File:
 		p, err = pipeline.NewFilePipeline(r.filename)
 	}
 	if err != nil {
