@@ -2,18 +2,13 @@ package recorder
 
 import (
 	"errors"
-	"fmt"
-	"net/url"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
 
-	"github.com/livekit/protocol/auth"
 	"github.com/livekit/protocol/logger"
 	livekit "github.com/livekit/protocol/proto"
-	"github.com/livekit/protocol/utils"
-	"github.com/tinyzimmer/go-gst/gst"
 
 	"github.com/livekit/livekit-recorder/pkg/config"
 )
@@ -21,10 +16,11 @@ import (
 type Recorder struct {
 	conf *config.Config
 
+	isStream     bool
 	filename     string
 	xvfb         *exec.Cmd
 	chromeCancel func()
-	pipeline     *gst.Pipeline
+	pipeline     *Pipeline
 }
 
 func NewRecorder(conf *config.Config) *Recorder {
@@ -33,20 +29,33 @@ func NewRecorder(conf *config.Config) *Recorder {
 	}
 }
 
-// Run blocks until the recording is complete, then cleans up chrome and xvfb
 func (r *Recorder) Init(req *livekit.StartRecordingRequest) error {
 	config.UpdateRequestParams(r.conf, req)
 	width := int(req.Options.InputWidth)
 	height := int(req.Options.InputHeight)
 
+	// validate input
+	input, err := r.getInputUrl(req)
+	if err != nil {
+		return err
+	}
+
+	// validate output
 	if s3, ok := req.Output.(*livekit.StartRecordingRequest_S3Url); ok {
 		idx := strings.LastIndex(s3.S3Url, "/")
 		if idx < 6 ||
 			!strings.HasPrefix(s3.S3Url, "s3://") ||
 			!strings.HasSuffix(s3.S3Url, ".mp4") {
-			return errors.New("malformed s3 url, should be s3://bucket/{path/to/}filename.mp4")
+			return errors.New("malformed s3 url, should be s3://bucket/{path/}filename.mp4")
 		}
 		r.filename = s3.S3Url[idx+1:]
+		r.isStream = false
+	} else {
+		r.isStream = true
+	}
+
+	if r.conf.Test {
+		return nil
 	}
 
 	// Xvfb
@@ -57,10 +66,6 @@ func (r *Recorder) Init(req *livekit.StartRecordingRequest) error {
 	r.xvfb = xvfb
 
 	// Chrome
-	input, err := r.getInputUrl(req)
-	if err != nil {
-		return err
-	}
 	cancel, err := r.launchChrome(input, width, height)
 	if err != nil {
 		logger.Errorw("error launching chrome", err)
@@ -73,7 +78,14 @@ func (r *Recorder) Init(req *livekit.StartRecordingRequest) error {
 // Run blocks until completion
 func (r *Recorder) Run(recordingId string, req *livekit.StartRecordingRequest) *livekit.RecordingResult {
 	start := time.Now()
-	err := r.runGStreamer(req)
+
+	var err error
+	if r.conf.Test {
+		// sleep to emulate running
+		time.Sleep(time.Second * 3)
+	} else {
+		err = r.runGStreamer(req)
+	}
 
 	res := &livekit.RecordingResult{Id: recordingId}
 	if err != nil {
@@ -84,7 +96,7 @@ func (r *Recorder) Run(recordingId string, req *livekit.StartRecordingRequest) *
 		res.Duration = time.Since(start).Milliseconds() / 1000
 	}
 
-	if s3, ok := req.Output.(*livekit.StartRecordingRequest_S3Url); ok {
+	if s3, ok := req.Output.(*livekit.StartRecordingRequest_S3Url); ok && !r.conf.Test {
 		if err = r.upload(s3.S3Url); err != nil {
 			res.Error = err.Error()
 		} else {
@@ -97,6 +109,9 @@ func (r *Recorder) Run(recordingId string, req *livekit.StartRecordingRequest) *
 
 // TODO
 func (r *Recorder) AddOutput(rtmp string) error {
+	if !r.isStream {
+		return errors.New("cannot add stream output to file recording")
+	}
 	return nil
 }
 
@@ -108,7 +123,7 @@ func (r *Recorder) RemoveOutput(rtmp string) error {
 func (r *Recorder) Stop() {
 	logger.Debugw("sending EOS to pipeline")
 	if p := r.pipeline; p != nil {
-		p.SendEvent(gst.NewEOSEvent())
+		p.Close()
 	}
 }
 
@@ -125,51 +140,4 @@ func (r *Recorder) Close() error {
 		r.xvfb = nil
 	}
 	return nil
-}
-
-func (r *Recorder) getInputUrl(req *livekit.StartRecordingRequest) (string, error) {
-	switch req.Input.(type) {
-	case *livekit.StartRecordingRequest_Url:
-		return req.Input.(*livekit.StartRecordingRequest_Url).Url, nil
-	case *livekit.StartRecordingRequest_Template:
-		template := req.Input.(*livekit.StartRecordingRequest_Template).Template
-
-		var token string
-		switch template.Room.(type) {
-		case *livekit.RecordingTemplate_RoomName:
-			var err error
-			token, err = r.buildToken(template.Room.(*livekit.RecordingTemplate_RoomName).RoomName)
-			if err != nil {
-				return "", err
-			}
-		case *livekit.RecordingTemplate_Token:
-			token = template.Room.(*livekit.RecordingTemplate_Token).Token
-		default:
-			return "", errors.New("token or room name required")
-		}
-
-		return fmt.Sprintf("https://recorder.livekit.io/#/%s?url=%s&token=%s",
-			template.Layout, url.QueryEscape(r.conf.WsUrl), token), nil
-	default:
-		return "", errors.New("input url or template required")
-	}
-}
-
-func (r *Recorder) buildToken(roomName string) (string, error) {
-	f := false
-	t := true
-	grant := &auth.VideoGrant{
-		RoomRecord:   true,
-		Room:         roomName,
-		CanPublish:   &f,
-		CanSubscribe: &t,
-		Hidden:       true,
-	}
-
-	at := auth.NewAccessToken(r.conf.ApiKey, r.conf.ApiSecret).
-		AddGrant(grant).
-		SetIdentity(utils.NewGuid(utils.RecordingPrefix)).
-		SetValidFor(24 * time.Hour)
-
-	return at.ToJWT()
 }

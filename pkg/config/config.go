@@ -93,6 +93,10 @@ func TestConfig() *Config {
 }
 
 func UpdateRequestParams(conf *Config, req *livekit.StartRecordingRequest) {
+	if req.Options == nil {
+		req.Options = &livekit.RecordingOptions{}
+	}
+
 	if req.Options.Preset != livekit.RecordingPreset_NONE {
 		req.Options = fromPreset(req.Options.Preset)
 		return

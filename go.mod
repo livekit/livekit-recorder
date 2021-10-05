@@ -9,9 +9,10 @@ require (
 	github.com/go-logr/zapr v1.0.0
 	github.com/go-redis/redis/v8 v8.11.3
 	github.com/livekit/livekit-recorder/service v0.0.0-20210921233535-db02598d5a2e
-	github.com/livekit/protocol v0.9.6-0.20211004202057-dd31c5c6a7c9
+	github.com/livekit/protocol v0.9.6-0.20211004234136-efb021f478ca
 	github.com/magefile/mage v1.11.0
 	github.com/pkg/errors v0.9.1
+	github.com/stretchr/testify v1.7.0
 	github.com/tinyzimmer/go-glib v0.0.24
 	github.com/tinyzimmer/go-gst v0.2.30
 	github.com/urfave/cli/v2 v2.3.0

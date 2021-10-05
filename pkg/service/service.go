@@ -75,7 +75,7 @@ func (s *Service) Run() error {
 				continue
 			}
 
-			if req.SubmittedAt < time.Now().Add(-recording.ReservationTimeout).UnixNano() {
+			if req.SubmittedAt < time.Now().Add(-recording.ReservationTimeout).UnixNano()/1e6 {
 				logger.Debugw("Discarding old request", "ID", req.Id)
 				continue
 			}

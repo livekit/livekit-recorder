@@ -1,3 +1,5 @@
+//+build linux
+
 package recorder
 
 import (
@@ -10,6 +12,14 @@ import (
 
 	"github.com/livekit/livekit-recorder/pkg/pipeline"
 )
+
+type Pipeline struct {
+	*gst.Pipeline
+}
+
+func (p *Pipeline) Close() {
+	p.SendEvent(gst.NewEOSEvent())
+}
 
 // TODO: better error handling, split pipelines, GPU support
 func (r *Recorder) runGStreamer(req *livekit.StartRecordingRequest) error {
