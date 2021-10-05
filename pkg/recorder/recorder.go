@@ -88,31 +88,28 @@ func (r *Recorder) Init(req *livekit.StartRecordingRequest) error {
 
 // Run blocks until completion
 func (r *Recorder) Run(recordingId string, req *livekit.StartRecordingRequest) *livekit.RecordingResult {
-	start := time.Now()
-
 	var err error
-	if r.conf.Test {
-		// sleep to emulate running
-		time.Sleep(time.Second * 3)
-	} else {
-		err = r.runGStreamer(req)
-	}
-
 	res := &livekit.RecordingResult{Id: recordingId}
+	defer logger.Infow("recording complete", "recordingId", recordingId,
+		"error", res.Error, "duration", res.Duration, "url", res.DownloadUrl)
+
+	start := time.Now()
+	err = r.runGStreamer(req)
 	if err != nil {
 		logger.Errorw("error launching gstreamer", err)
 		res.Error = err.Error()
-	} else {
-		logger.Infow("recording complete")
-		res.Duration = time.Since(start).Milliseconds() / 1000
+		return res
 	}
+
+	res.Duration = time.Since(start).Milliseconds() / 1000
 
 	if s3, ok := req.Output.(*livekit.StartRecordingRequest_S3Url); ok && !r.conf.Test {
 		if err = r.upload(s3.S3Url); err != nil {
 			res.Error = err.Error()
-		} else {
-			res.DownloadUrl = s3.S3Url
+			return res
 		}
+
+		res.DownloadUrl = s3.S3Url
 	}
 
 	return res
@@ -132,7 +129,6 @@ func (r *Recorder) RemoveOutput(rtmp string) error {
 }
 
 func (r *Recorder) Stop() {
-	logger.Debugw("sending EOS to pipeline")
 	if p := r.pipeline; p != nil {
 		p.Close()
 	}

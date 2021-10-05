@@ -18,6 +18,7 @@ type Pipeline struct {
 }
 
 func (p *Pipeline) Close() {
+	logger.Debugw("Sending EOS to pipeline")
 	p.SendEvent(gst.NewEOSEvent())
 }
 

@@ -100,8 +100,6 @@ func TestService(t *testing.T) {
 		}))
 		status := svc.Status()
 		require.True(t, status == Stopping || status == Available)
-		// mock recorder doesn't actually stop, since it just calls time.Sleep
-		time.Sleep(time.Millisecond * 3100)
 	})
 
 	t.Run("Kill service", func(t *testing.T) {
