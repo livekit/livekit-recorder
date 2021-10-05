@@ -18,9 +18,9 @@ type Config struct {
 	HealthPort  int                       `yaml:"health_port"`
 	LogLevel    string                    `yaml:"log_level"`
 	GstLogLevel string                    `yaml:"gst_log_level"`
-	Defaults    *livekit.RecordingOptions `yaml:"defaults"`
 	Redis       RedisConfig               `yaml:"redis"`
 	S3          S3Config                  `yaml:"s3"`
+	Defaults    *livekit.RecordingOptions `yaml:"defaults"`
 	Test        bool                      `yaml:"-"`
 }
 
