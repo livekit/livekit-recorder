@@ -14,9 +14,8 @@ import (
 )
 
 func (r *Recorder) launchXvfb(width, height, depth int) (*exec.Cmd, error) {
-	logger.Debugw("launching xvfb")
-
 	dims := fmt.Sprintf("%dx%dx%d", width, height, depth)
+	logger.Debugw("launching xvfb", "dims", dims)
 	xvfb := exec.Command("Xvfb", config.Display, "-screen", "0", dims, "-ac", "-nolisten", "tcp")
 	if err := xvfb.Start(); err != nil {
 		return nil, err
@@ -33,7 +32,6 @@ func (r *Recorder) launchChrome(url string, width, height int) (func(), error) {
 		chromedp.NoDefaultBrowserCheck,
 		chromedp.DisableGPU,
 		chromedp.NoSandbox,
-		chromedp.WindowSize(width, height),
 
 		// puppeteer default behavior
 		chromedp.Flag("disable-infobars", true),
@@ -61,9 +59,11 @@ func (r *Recorder) launchChrome(url string, width, height int) (func(), error) {
 		chromedp.Flag("use-mock-keychain", true),
 
 		// custom args
+		chromedp.Flag("kiosk", true),
 		chromedp.Flag("enable-automation", false),
 		chromedp.Flag("autoplay-policy", "no-user-gesture-required"),
 		chromedp.Flag("window-position", "0,0"),
+		chromedp.Flag("window-size", fmt.Sprintf("%d,%d", width, height)),
 		chromedp.Flag("display", config.Display),
 	}
 

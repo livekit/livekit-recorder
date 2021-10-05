@@ -103,8 +103,8 @@ func UpdateRequestParams(conf *Config, req *livekit.StartRecordingRequest) {
 	}
 
 	if req.Options.InputWidth == 0 || req.Options.InputHeight == 0 {
-		req.Options.InputWidth = conf.Defaults.InputHeight
-		req.Options.InputHeight = conf.Defaults.InputWidth
+		req.Options.InputWidth = conf.Defaults.InputWidth
+		req.Options.InputHeight = conf.Defaults.InputHeight
 	}
 	if req.Options.Depth == 0 {
 		req.Options.Depth = conf.Defaults.Depth
