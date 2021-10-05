@@ -10,7 +10,10 @@ You can write the output as mp4 to a file or upload it to s3, or forward the out
 
 ## Config
 
-Whether running the standalone recorder or running in service mode, you'll need a yaml config file. All config options:
+Both the standalone recorder and recorder service take a yaml config file. If you will be using templates with your recording requests, `ws_url` is required, and to record by room name instead of token, `api_key` and
+`api_secret` are also required. When running in service mode, `redis` config is required (with the same db as your LiveKit server), as this is how it receives requests.
+
+All config options:
 
 ```yaml
 api_key: livekit server api key (required if using templates without supplying tokens)
@@ -19,7 +22,7 @@ ws_url: livekit server ws url (required if using templates)
 health_port: http port to serve status (optional)
 log_level: valid levels are debug, info, warn, error, fatal, or panic. Defaults to debug
 gst_log_level: (string) valid levels are "0" (none) to "9" (memdump). Anything above "3" can be very noisy. Defaults to "3".
-redis: (required by service mode)
+redis: (service mode only)
     address: redis address, including port
     username: redis username (optional)
     password: redis password (optional)
@@ -41,12 +44,7 @@ defaults:
     video_bitrate: defaults to 4500 (kbps)
 ```
 
-If you will be using templates with your recording requests, `ws_url` is required, and to record by room name instead of token, `api_key` and
-`api_secret` are also required.
-
-When running in service mode, redis config is required (it needs to connect to the same db as your LiveKit server).
-
-The `defaults.preset` field will provide the following values as defaults:
+### Presets
 
 | Preset       | input_width | input_height | framerate | video_bitrate |
 |---           |---          |---           |---        |---            |
@@ -55,7 +53,7 @@ The `defaults.preset` field will provide the following values as defaults:
 | "FULL_HD_30" | 1920        | 1080         | 30        | 4500          |
 | "FULL_HD_60" | 1920        | 1080         | 60        | 6000          |
 
-If you don't supply any options, it defaults to 1080p 30 fps.
+If you don't supply any options with your config defaults or the request, it defaults to FULL_HD_30.
 
 ## Request
 
@@ -106,15 +104,17 @@ You can also save or stream any other webpage - just supply the url.
 ```json
 {
     // input...
-    "file": "/app/out/recording.mp4"
+    "file": "/out/recording.mp4"
 }
 ```
 Note: your local mounted directory needs to exist, and the docker directory should match file output (i.e. `/app/out`)
 ```bash
 mkdir -p ~/livekit/output
 
-docker run --rm -e LIVEKIT_RECORDER_CONFIG="$(cat config.json)" \
-    -v ~/livekit/output:/app/out \
+docker run --rm \
+    -e LIVEKIT_RECORDER_CONFIG="$(cat config.yaml)" \
+    -e RECORDING_REQUEST="$(cat file.json)" \
+    -v ~/livekit/recordings:/out \
     livekit/livekit-recorder
 ```
 
@@ -128,7 +128,10 @@ docker run --rm -e LIVEKIT_RECORDER_CONFIG="$(cat config.json)" \
 ```
 
 ```bash
-docker run --rm -e LIVEKIT_RECORDER_CONFIG="$(cat config.json)" livekit/livekit-recorder
+docker run --rm \
+    -e LIVEKIT_RECORDER_CONFIG="$(cat config.yaml)" \
+    -e RECORDING_REQUEST="$(cat s3.json)" \
+    livekit/livekit-recorder
 ```
 
 ### RTMP
@@ -143,7 +146,10 @@ docker run --rm -e LIVEKIT_RECORDER_CONFIG="$(cat config.json)" livekit/livekit-
 ```
 
 ```bash
-docker run --rm -e LIVEKIT_RECORDER_CONFIG="$(cat config.json)" livekit/livekit-recorder
+docker run --rm \
+    -e LIVEKIT_RECORDER_CONFIG="$(cat config.yaml)" \
+    -e RECORDING_REQUEST="$(cat rtmp.json)" \
+    livekit/livekit-recorder
 ```
 
 # Service Mode

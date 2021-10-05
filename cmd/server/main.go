@@ -31,7 +31,7 @@ func main() {
 			&cli.StringFlag{
 				Name:    "config-body",
 				Usage:   "Default LiveKit recording config in JSON, typically passed in as an env var in a container",
-				EnvVars: []string{"LIVEKIT_RECORDER_SVC_CONFIG"},
+				EnvVars: []string{"LIVEKIT_RECORDER_CONFIG"},
 			},
 		},
 		Commands: []*cli.Command{
@@ -45,8 +45,9 @@ func main() {
 						Usage: "path to json StartRecordingRequest file",
 					},
 					&cli.StringFlag{
-						Name:  "request-body",
-						Usage: "StartRecordingRequest json",
+						Name:    "request-body",
+						Usage:   "StartRecordingRequest json",
+						EnvVars: []string{"RECORDING_REQUEST"},
 					},
 				},
 			},
