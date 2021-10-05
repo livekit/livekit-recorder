@@ -41,17 +41,28 @@ func (r *Recorder) Init(req *livekit.StartRecordingRequest) error {
 	}
 
 	// validate output
-	if s3, ok := req.Output.(*livekit.StartRecordingRequest_S3Url); ok {
-		idx := strings.LastIndex(s3.S3Url, "/")
+	switch req.Output.(type) {
+	case *livekit.StartRecordingRequest_S3Url:
+		s3 := req.Output.(*livekit.StartRecordingRequest_S3Url).S3Url
+		idx := strings.LastIndex(s3, "/")
 		if idx < 6 ||
-			!strings.HasPrefix(s3.S3Url, "s3://") ||
-			!strings.HasSuffix(s3.S3Url, ".mp4") {
-			return errors.New("malformed s3 url, should be s3://bucket/{path/}filename.mp4")
+			!strings.HasPrefix(s3, "s3://") ||
+			!strings.HasSuffix(s3, ".mp4") {
+			return errors.New("s3 output must be s3://bucket/{path/}filename.mp4")
 		}
-		r.filename = s3.S3Url[idx+1:]
+		r.filename = s3[idx+1:]
 		r.isStream = false
-	} else {
+	case *livekit.StartRecordingRequest_Rtmp:
 		r.isStream = true
+	case *livekit.StartRecordingRequest_File:
+		filename := req.Output.(*livekit.StartRecordingRequest_File).File
+		if !strings.HasSuffix(filename, ".mp4") {
+			return errors.New("file output must be {path/}filename.mp4")
+		}
+		r.filename = filename
+		r.isStream = false
+	default:
+		return errors.New("missing output")
 	}
 
 	if r.conf.Test {

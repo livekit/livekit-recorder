@@ -29,7 +29,7 @@ s3: (required if using s3 output)
     secret: s3 access secret
     region: s3 region
 defaults:
-    preset: defaults to 0
+    preset: defaults to "NONE", see options below
     input_width: defaults to 1920
     input_height: defaults to 1080
     depth: defaults to 24
@@ -48,12 +48,12 @@ When running in service mode, redis config is required (it needs to connect to t
 
 The `defaults.preset` field will provide the following values as defaults:
 
-| Preset  | input_width | input_height | framerate | video_bitrate |
-|---      |---          |---           |---        |---            |
-| 1       | 1280        | 720          | 30        | 3000          |
-| 2       | 1280        | 720          | 60        | 4500          |
-| 3       | 1920        | 1080         | 30        | 4500          |
-| 4       | 1920        | 1080         | 60        | 6000          |
+| Preset       | input_width | input_height | framerate | video_bitrate |
+|---           |---          |---           |---        |---            |
+| "HD_30"      | 1280        | 720          | 30        | 3000          |
+| "HD_60"      | 1280        | 720          | 60        | 4500          |
+| "FULL_HD_30" | 1920        | 1080         | 30        | 4500          |
+| "FULL_HD_60" | 1920        | 1080         | 60        | 6000          |
 
 If you don't supply any options, it defaults to 1080p 30 fps.
 
@@ -184,7 +184,7 @@ s3.json:
     "url": "https://your-recording-domain.com",
     "s3Url": "bucket/path/filename.mp4",
     "options": {
-        "preset": "720p60"
+        "preset": "HD_60"
     }
 }
 ```
