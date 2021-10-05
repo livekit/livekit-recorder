@@ -14,7 +14,7 @@ var testRequests = []string{`
 		"layout": "grid-light",
 		"token": "recording-token"
 	},
-	"s3Url": "bucket/path/filename.mp4"
+	"s3_url": "bucket/path/filename.mp4"
 }
 `, `
 {

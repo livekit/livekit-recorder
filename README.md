@@ -59,7 +59,9 @@ If you don't supply any options, it defaults to 1080p 30 fps.
 
 ## Request
 
-See StartRecordingRequest [here](https://github.com/livekit/protocol/blob/main/livekit_recording.proto#L16). When using standalone mode, the request can be input as a json file.
+See StartRecordingRequest [here](https://github.com/livekit/protocol/blob/main/livekit_recording.proto#L16).
+When using standalone mode, the request can be input as a json file. In service mode, these requests will be made through
+the LiveKit server's recording api.
 
 ### Template input
 
@@ -71,7 +73,7 @@ Check out our [web README](https://github.com/livekit/livekit-recorder/tree/main
 {
     "template": {
         "layout": "<grid|speaker>-<light|dark>",
-        "room_name": "room-to-record"
+        "room_name": "<room-to-record>"
     }
     // output...
 }
@@ -92,7 +94,7 @@ Or, to use your own token instead of having the recorder generate one:
 You can also save or stream any other webpage - just supply the url.
 ```json
 {   
-    "url": "your-recording-domain.com",
+    "url": "<your-recording-domain.com>"
     // output...
 }
 ```
@@ -104,7 +106,7 @@ You can also save or stream any other webpage - just supply the url.
 ```json
 {
     // input...
-    "file": "/app/out/recording.mp4",
+    "file": "/app/out/recording.mp4"
 }
 ```
 Note: your local mounted directory needs to exist, and the docker directory should match file output (i.e. `/app/out`)
@@ -121,7 +123,7 @@ docker run --rm -e LIVEKIT_RECORDER_CONFIG="$(cat config.json)" \
 ```json
 {
     // input...
-    "s3Url": "bucket/path/filename.mp4"
+    "s3_url": "bucket/path/filename.mp4"
 }
 ```
 
@@ -142,81 +144,6 @@ docker run --rm -e LIVEKIT_RECORDER_CONFIG="$(cat config.json)" livekit/livekit-
 
 ```bash
 docker run --rm -e LIVEKIT_RECORDER_CONFIG="$(cat config.json)" livekit/livekit-recorder
-```
-
-## Ending a recording
-
-Once started, there are a number of ways to end the recording:
-* `docker stop <container>`
-* if using our templates, the recorder will stop automatically when the last participant leaves
-* if using your own webpage, logging `END_RECORDING` to the console
-
-With any of these methods, the recorder will stop ffmpeg and finish uploading before shutting down.
-
-## Examples
-
-### Basic recording
-
-basic.json:
-```json
-{
-    "template": {
-        "layout": "speaker-dark",
-        "ws_url": "<wss://livekit.your-domain.com>",
-        "room_name": "<my-room>"
-    },
-    "file": "/app/out/recording.mp4"
-}
-```
-```bash
-mkdir -p ~/livekit/output
-
-docker run --rm -e LIVEKIT_RECORDER_CONFIG="$(cat basic.json)" \
-    -v ~/livekit/output:/app/out \
-    livekit/livekit-recorder
-```
-
-### Record custom url at 720p, 60fps and upload to s3
-
-s3.json:
-```json
-{
-    "url": "https://your-recording-domain.com",
-    "s3Url": "bucket/path/filename.mp4",
-    "options": {
-        "preset": "HD_60"
-    }
-}
-```
-```bash
-docker run --rm --name my-recorder -e LIVEKIT_RECORDER_CONFIG="$(cat s3.json)" livekit/livekit-recorder
-```
-```bash
-docker stop my-recorder
-```
-
-### Stream to Twitch, scaling output from 1080p to 720p
-
-twitch.json:
-```json
-{
-    "template": {
-        "layout": "speaker-dark",
-        "token": "<recording-token>"
-    },
-    "rtmp": {
-        "urls": ["rtmp://live.twitch.tv/app/<stream-key>"]
-    },
-    "options": {
-        "input_width": 1920,
-        "input_height": 1080,
-        "output_width": 1280,
-        "output_height": 720
-    }
-}
-```
-```bash
-docker run --rm -e LIVEKIT_RECORDER_CONFIG="$(cat twitch.json)" livekit/livekit-recorder
 ```
 
 # Service Mode
@@ -255,3 +182,90 @@ docker run --network host -e REDIS_HOST="192.168.65.2:6379" recorder-svc
 ```
 
 You can then use our [cli](https://github.com/livekit/livekit-cli) to submit recording requests to your server.
+
+# Examples
+
+Start by filling in a config.yaml:
+
+```
+api_key: <livekit-server-api-key>
+api_secret: <livekit-server-api-secret>
+ws_url: <livekit-server-ws-url>
+s3:
+  access_key: <s3-access-key>
+  secret: <s3-secret>
+  region: <s3-region>
+```
+
+## Basic recording
+
+basic.json:
+```json
+{
+  "template": {
+    "layout": "speaker-dark",
+    "room_name": "my-room"
+  },
+  "file": "/out/test_recording.mp4"
+}
+```
+```bash
+mkdir -p ~/livekit/output
+
+docker run --rm -e LIVEKIT_RECORDER_CONFIG="$(cat basic.json)" \
+    -v ~/livekit/output:/app/out \
+    livekit/livekit-recorder
+```
+
+## Record custom url at 720p, 60fps and upload to s3
+
+s3.json:
+```json
+{
+    "url": "https://your-recording-domain.com",
+    "s3Url": "bucket/path/filename.mp4",
+    "options": {
+        "preset": "HD_60"
+    }
+}
+```
+```bash
+docker run --rm --name my-recorder -e LIVEKIT_RECORDER_CONFIG="$(cat s3.json)" livekit/livekit-recorder
+```
+```bash
+docker stop my-recorder
+```
+
+## Stream to Twitch, scaling output from 1080p to 720p
+
+twitch.json:
+```json
+{
+    "template": {
+        "layout": "speaker-dark",
+        "token": "<recording-token>"
+    },
+    "rtmp": {
+        "urls": ["rtmp://live.twitch.tv/app/<stream-key>"]
+    },
+    "options": {
+        "input_width": 1920,
+        "input_height": 1080,
+        "output_width": 1280,
+        "output_height": 720,
+        "video_bitrate": 3000
+    }
+}
+```
+```bash
+docker run --rm -e LIVEKIT_RECORDER_CONFIG="$(cat twitch.json)" livekit/livekit-recorder
+```
+
+## Ending a recording
+
+Once started, there are a number of ways to end the recording:
+* `docker stop <container>`
+* if using our templates, the recorder will stop automatically when the last participant leaves
+* if using your own webpage, logging `END_RECORDING` to the console
+
+With any of these methods, the recorder will stop ffmpeg and finish uploading before shutting down.
