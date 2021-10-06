@@ -31,8 +31,8 @@ func NewRecorder(conf *config.Config) *Recorder {
 
 func (r *Recorder) Init(req *livekit.StartRecordingRequest) error {
 	config.UpdateRequestParams(r.conf, req)
-	width := int(req.Options.InputWidth)
-	height := int(req.Options.InputHeight)
+	width := int(req.Options.Width)
+	height := int(req.Options.Height)
 
 	// validate input
 	input, err := r.getInputUrl(req)

@@ -2,7 +2,11 @@
 
 package pipeline
 
-import "github.com/tinyzimmer/go-gst/gst"
+import (
+	"fmt"
+
+	"github.com/tinyzimmer/go-gst/gst"
+)
 
 type VideoSource struct {
 	elements   []*gst.Element
@@ -17,8 +21,7 @@ func (s *VideoSource) GetSourcePad() *gst.Pad {
 	return s.srcElement.GetStaticPad("src")
 }
 
-// TODO: scaling
-func getVideoSource() (*VideoSource, error) {
+func getVideoSource(bitrate int32) (*VideoSource, error) {
 	xImageSrc, err := gst.NewElement("ximagesrc")
 	if err != nil {
 		return nil, err
@@ -37,6 +40,7 @@ func getVideoSource() (*VideoSource, error) {
 	if err != nil {
 		return nil, err
 	}
+	x264Enc.SetArg("bitrate", fmt.Sprint(bitrate))
 	x264Enc.SetArg("speed-preset", "veryfast")
 	x264Enc.SetArg("tune", "zerolatency")
 

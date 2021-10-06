@@ -43,8 +43,8 @@ func NewConfig(confString string) (*Config, error) {
 		LogLevel:    "debug",
 		GstLogLevel: "3",
 		Defaults: &livekit.RecordingOptions{
-			InputWidth:     1920,
-			InputHeight:    1080,
+			Width:          1920,
+			Height:         1080,
 			Depth:          24,
 			Framerate:      30,
 			AudioBitrate:   128,
@@ -80,8 +80,8 @@ func TestConfig() *Config {
 			Address: "localhost:6379",
 		},
 		Defaults: &livekit.RecordingOptions{
-			InputWidth:     1920,
-			InputHeight:    1080,
+			Width:          1920,
+			Height:         1080,
 			Depth:          24,
 			Framerate:      30,
 			AudioBitrate:   128,
@@ -102,9 +102,9 @@ func UpdateRequestParams(conf *Config, req *livekit.StartRecordingRequest) {
 		return
 	}
 
-	if req.Options.InputWidth == 0 || req.Options.InputHeight == 0 {
-		req.Options.InputWidth = conf.Defaults.InputWidth
-		req.Options.InputHeight = conf.Defaults.InputHeight
+	if req.Options.Width == 0 || req.Options.Height == 0 {
+		req.Options.Width = conf.Defaults.Width
+		req.Options.Height = conf.Defaults.Height
 	}
 	if req.Options.Depth == 0 {
 		req.Options.Depth = conf.Defaults.Depth
@@ -129,8 +129,8 @@ func fromPreset(preset livekit.RecordingPreset) *livekit.RecordingOptions {
 	switch preset {
 	case livekit.RecordingPreset_HD_30:
 		return &livekit.RecordingOptions{
-			InputWidth:     1280,
-			InputHeight:    720,
+			Width:          1280,
+			Height:         720,
 			Depth:          24,
 			Framerate:      30,
 			AudioBitrate:   128,
@@ -139,8 +139,8 @@ func fromPreset(preset livekit.RecordingPreset) *livekit.RecordingOptions {
 		}
 	case livekit.RecordingPreset_HD_60:
 		return &livekit.RecordingOptions{
-			InputWidth:     1280,
-			InputHeight:    720,
+			Width:          1280,
+			Height:         720,
 			Depth:          24,
 			Framerate:      60,
 			AudioBitrate:   128,
@@ -149,8 +149,8 @@ func fromPreset(preset livekit.RecordingPreset) *livekit.RecordingOptions {
 		}
 	case livekit.RecordingPreset_FULL_HD_30:
 		return &livekit.RecordingOptions{
-			InputWidth:     1920,
-			InputHeight:    1080,
+			Width:          1920,
+			Height:         1080,
 			Depth:          24,
 			Framerate:      30,
 			AudioBitrate:   128,
@@ -159,8 +159,8 @@ func fromPreset(preset livekit.RecordingPreset) *livekit.RecordingOptions {
 		}
 	case livekit.RecordingPreset_FULL_HD_60:
 		return &livekit.RecordingOptions{
-			InputWidth:     1920,
-			InputHeight:    1080,
+			Width:          1920,
+			Height:         1080,
 			Depth:          24,
 			Framerate:      60,
 			AudioBitrate:   128,

@@ -34,10 +34,8 @@ var testRequests = []string{`
         "urls": ["rtmp://stream-url.com", "rtmp://live.twitch.tv/app/stream-key"]
     },
 	"options": {
-        "input_width": 1920,
-        "input_height": 1080,
-        "output_width": 1280,
-        "output_height": 720
+        "width": 1920,
+        "height": 1080,
 	}
 }
 `}
@@ -90,7 +88,6 @@ func TestRequests(t *testing.T) {
 		require.True(t, ok)
 		expected := []string{"rtmp://stream-url.com", "rtmp://live.twitch.tv/app/stream-key"}
 		require.Equal(t, expected, rtmp.Rtmp.Urls)
-		require.Equal(t, int32(1920), req.Options.InputWidth)
-		require.Equal(t, int32(1280), req.Options.OutputWidth)
+		require.Equal(t, int32(1920), req.Options.Width)
 	})
 }

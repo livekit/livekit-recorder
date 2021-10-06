@@ -26,12 +26,12 @@ func NewFilePipeline(filename string, options *livekit.RecordingOptions) (*gst.P
 }
 
 func newPipeline(output *Output, options *livekit.RecordingOptions) (*gst.Pipeline, error) {
-	audioSource, err := getAudioSource(options.AudioFrequency)
+	audioSource, err := getAudioSource(options.AudioBitrate, options.AudioFrequency)
 	if err != nil {
 		return nil, err
 	}
 
-	videoSource, err := getVideoSource()
+	videoSource, err := getVideoSource(options.VideoBitrate)
 	if err != nil {
 		return nil, err
 	}

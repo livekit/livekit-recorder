@@ -21,7 +21,7 @@ func (s *AudioSource) GetSourcePad() *gst.Pad {
 	return s.srcElement.GetStaticPad("src")
 }
 
-func getAudioSource(frequency int32) (*AudioSource, error) {
+func getAudioSource(bitrate, frequency int32) (*AudioSource, error) {
 	pulseSrc, err := gst.NewElement("pulsesrc")
 	if err != nil {
 		return nil, err
@@ -46,6 +46,10 @@ func getAudioSource(frequency int32) (*AudioSource, error) {
 	if err != nil {
 		return nil, err
 	}
+	err = faac.Set("bitrate", fmt.Sprint(bitrate*1000))
+	if err != nil {
+		return nil, err
+	}
 
 	audioQueue, err := gst.NewElement("queue")
 	if err != nil {
@@ -53,7 +57,7 @@ func getAudioSource(frequency int32) (*AudioSource, error) {
 	}
 
 	return &AudioSource{
-		elements:   []*gst.Element{pulseSrc, audioConvert, faac, audioQueue},
+		elements:   []*gst.Element{pulseSrc, audioConvert, capsFilter, faac, audioQueue},
 		srcElement: audioQueue,
 	}, nil
 }

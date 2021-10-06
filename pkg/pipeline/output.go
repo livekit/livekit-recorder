@@ -31,6 +31,10 @@ func getRtmpOutput(rtmp []string) (*Output, error) {
 	if err != nil {
 		return nil, err
 	}
+	err = mux.Set("streamable", true)
+	if err != nil {
+		return nil, err
+	}
 
 	sink, err := gst.NewElement("rtmpsink")
 	if err != nil {

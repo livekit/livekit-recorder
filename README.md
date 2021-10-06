@@ -33,12 +33,10 @@ s3: (required if using s3 output)
     region: s3 region
 defaults:
     preset: defaults to "NONE", see options below
-    input_width: defaults to 1920
-    input_height: defaults to 1080
+    width: defaults to 1920
+    height: defaults to 1080
     depth: defaults to 24
     framerate: defaults to 30
-    output_width: defaults to 0 (no scaling)
-    output_height: defaults to 0 (no scaling)
     audio_bitrate: defaults to 128 (kbps)
     audio_frequency: defaults to 44100 (Hz)
     video_bitrate: defaults to 4500 (kbps)
@@ -46,12 +44,12 @@ defaults:
 
 ### Presets
 
-| Preset       | input_width | input_height | framerate | video_bitrate |
-|---           |---          |---           |---        |---            |
-| "HD_30"      | 1280        | 720          | 30        | 3000          |
-| "HD_60"      | 1280        | 720          | 60        | 4500          |
-| "FULL_HD_30" | 1920        | 1080         | 30        | 4500          |
-| "FULL_HD_60" | 1920        | 1080         | 60        | 6000          |
+| Preset       | width | height | framerate | video_bitrate |
+|---           |---    |---     |---        |---            |
+| "HD_30"      | 1280  | 720    | 30        | 3000          |
+| "HD_60"      | 1280  | 720    | 60        | 4500          |
+| "FULL_HD_30" | 1920  | 1080   | 30        | 4500          |
+| "FULL_HD_60" | 1920  | 1080   | 60        | 6000          |
 
 If you don't supply any options with your config defaults or the request, it defaults to FULL_HD_30.
 
@@ -223,7 +221,7 @@ docker run --rm -e LIVEKIT_RECORDER_CONFIG="$(cat basic.json)" \
     livekit/livekit-recorder
 ```
 
-## Record custom url at 720p, 60fps and upload to s3
+## Record custom url at 720p, with 2048kbps video bitrate
 
 s3.json:
 ```json
@@ -231,7 +229,9 @@ s3.json:
     "url": "https://your-recording-domain.com",
     "s3Url": "bucket/path/filename.mp4",
     "options": {
-        "preset": "HD_60"
+        "width": "1280",
+        "height": "720",
+        "video_bitrate": 2048
     }
 }
 ```
@@ -242,7 +242,7 @@ docker run --rm --name my-recorder -e LIVEKIT_RECORDER_CONFIG="$(cat s3.json)" l
 docker stop my-recorder
 ```
 
-## Stream to Twitch, scaling output from 1080p to 720p
+## Stream to Twitch at 1080p, 60fps
 
 twitch.json:
 ```json
@@ -255,11 +255,7 @@ twitch.json:
         "urls": ["rtmp://live.twitch.tv/app/<stream-key>"]
     },
     "options": {
-        "input_width": 1920,
-        "input_height": 1080,
-        "output_width": 1280,
-        "output_height": 720,
-        "video_bitrate": 3000
+        "preset": "FULL_HD_60"
     }
 }
 ```
