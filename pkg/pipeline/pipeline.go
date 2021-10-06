@@ -31,7 +31,7 @@ func newPipeline(output *Output, options *livekit.RecordingOptions) (*gst.Pipeli
 		return nil, err
 	}
 
-	videoSource, err := getVideoSource(options.VideoBitrate)
+	videoSource, err := getVideoSource(options.VideoBitrate, options.Framerate)
 	if err != nil {
 		return nil, err
 	}

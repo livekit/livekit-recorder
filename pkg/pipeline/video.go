@@ -21,7 +21,7 @@ func (s *VideoSource) GetSourcePad() *gst.Pad {
 	return s.srcElement.GetStaticPad("src")
 }
 
-func getVideoSource(bitrate int32) (*VideoSource, error) {
+func getVideoSource(bitrate, framerate int32) (*VideoSource, error) {
 	xImageSrc, err := gst.NewElement("ximagesrc")
 	if err != nil {
 		return nil, err
@@ -32,6 +32,16 @@ func getVideoSource(bitrate int32) (*VideoSource, error) {
 	}
 
 	videoConvert, err := gst.NewElement("videoconvert")
+	if err != nil {
+		return nil, err
+	}
+
+	capsFilter, err := gst.NewElement("capsfilter")
+	if err != nil {
+		return nil, err
+	}
+	capsString := fmt.Sprintf("video/x-raw,framerate=%d/1", framerate)
+	err = capsFilter.SetProperty("caps", gst.NewCapsFromString(capsString))
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +60,7 @@ func getVideoSource(bitrate int32) (*VideoSource, error) {
 	}
 
 	return &VideoSource{
-		elements:   []*gst.Element{xImageSrc, videoConvert, x264Enc, videoQueue},
+		elements:   []*gst.Element{xImageSrc, videoConvert, capsFilter, x264Enc, videoQueue},
 		srcElement: videoQueue,
 	}, nil
 }
