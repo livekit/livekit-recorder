@@ -26,7 +26,7 @@ func getVideoSource(bitrate, framerate int32) (*VideoSource, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = xImageSrc.Set("show-pointer", false)
+	err = xImageSrc.SetProperty("show-pointer", false)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,10 @@ func getVideoSource(bitrate, framerate int32) (*VideoSource, error) {
 	if err != nil {
 		return nil, err
 	}
-	x264Enc.SetArg("bitrate", fmt.Sprint(bitrate))
+	err = x264Enc.SetProperty("bitrate", uint(bitrate))
+	if err != nil {
+		return nil, err
+	}
 	x264Enc.SetArg("speed-preset", "veryfast")
 	x264Enc.SetArg("tune", "zerolatency")
 

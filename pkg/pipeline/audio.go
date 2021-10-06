@@ -46,7 +46,7 @@ func getAudioSource(bitrate, frequency int32) (*AudioSource, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = faac.Set("bitrate", fmt.Sprint(bitrate*1000))
+	err = faac.SetProperty("bitrate", int(bitrate*1000))
 	if err != nil {
 		return nil, err
 	}
