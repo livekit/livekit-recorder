@@ -51,15 +51,17 @@ func TestService(t *testing.T) {
 	})
 
 	t.Run("RPC validation", func(t *testing.T) {
-		require.Error(t, recording.RPC(context.Background(), bus, id1, &livekit.RecordingRequest{
-			RequestId: utils.RandomSecret(),
-			Request: &livekit.RecordingRequest_AddOutput{
-				AddOutput: &livekit.AddOutputRequest{
-					RecordingId: id1,
-					RtmpUrl:     "rtmp://fake-url.com?stream-id=xyz",
+		require.Equal(t, "cannot add stream output to file recording",
+			recording.RPC(context.Background(), bus, id1, &livekit.RecordingRequest{
+				RequestId: utils.RandomSecret(),
+				Request: &livekit.RecordingRequest_AddOutput{
+					AddOutput: &livekit.AddOutputRequest{
+						RecordingId: id1,
+						RtmpUrl:     "rtmp://fake-url.com?stream-id=xyz",
+					},
 				},
-			},
-		}))
+			}).Error(),
+		)
 	})
 
 	t.Run("Recording completes", func(t *testing.T) {

@@ -2,14 +2,12 @@
 
 package display
 
-import (
-	"os/exec"
-)
+type Display struct{}
 
-func LaunchXvfb(width, height, depth int) (*exec.Cmd, error) {
-	return nil, nil
+func New() *Display { return &Display{} }
+
+func (d *Display) Launch(url string, width, height, depth int) error {
+	return nil
 }
 
-func LaunchChrome(url string, width, height int) (func(), error) {
-	return nil, nil
-}
+func (d *Display) Close() {}

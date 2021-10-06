@@ -43,10 +43,11 @@ func (s *Service) handleRecording() {
 				logger.Errorw("Failed to write results", err)
 			}
 
+			logger.Infow("recording complete", "recordingId", res.Id,
+				"error", res.Error, "duration", res.Duration, "url", res.DownloadUrl)
+
 			// clean up
-			if err = s.rec.Close(); err != nil {
-				logger.Errorw("Failed to close recorder", err)
-			}
+			s.rec.Close()
 			return
 		case msg := <-requests.Channel():
 			// unmarshal request

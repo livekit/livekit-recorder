@@ -2,8 +2,6 @@ package recorder
 
 import (
 	"errors"
-	"os"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -18,11 +16,10 @@ import (
 type Recorder struct {
 	conf *config.Config
 
-	isStream     bool
-	filename     string
-	xvfb         *exec.Cmd
-	chromeCancel func()
-	pipeline     *pipeline.Pipeline
+	isStream bool
+	filename string
+	display  *display.Display
+	pipeline *pipeline.Pipeline
 }
 
 func NewRecorder(conf *config.Config) *Recorder {
@@ -33,11 +30,9 @@ func NewRecorder(conf *config.Config) *Recorder {
 
 func (r *Recorder) Init(req *livekit.StartRecordingRequest) error {
 	config.UpdateRequestParams(r.conf, req)
-	width := int(req.Options.Width)
-	height := int(req.Options.Height)
 
 	// validate input
-	input, err := r.getInputUrl(req)
+	url, err := r.getInputUrl(req)
 	if err != nil {
 		return err
 	}
@@ -71,45 +66,29 @@ func (r *Recorder) Init(req *livekit.StartRecordingRequest) error {
 		return nil
 	}
 
-	// Xvfb
-	xvfb, err := display.LaunchXvfb(width, height, int(req.Options.Depth))
-	if err != nil {
-		logger.Errorw("error launching xvfb", err)
-	}
-	r.xvfb = xvfb
-
-	// Chrome
-	cancel, err := display.LaunchChrome(input, width, height)
-	if err != nil {
-		logger.Errorw("error launching chrome", err)
-		return err
-	}
-	r.chromeCancel = cancel
-	return nil
+	r.display = display.New()
+	return r.display.Launch(url, int(req.Options.Width), int(req.Options.Height), int(req.Options.Depth))
 }
 
 // Run blocks until completion
 func (r *Recorder) Run(recordingId string, req *livekit.StartRecordingRequest) *livekit.RecordingResult {
 	var err error
 	res := &livekit.RecordingResult{Id: recordingId}
-	defer logger.Infow("recording complete", "recordingId", recordingId,
-		"error", res.Error, "duration", res.Duration, "url", res.DownloadUrl)
 
-	start := time.Now()
-	p, err := r.getPipeline(req)
+	r.pipeline, err = r.getPipeline(req)
 	if err != nil {
 		logger.Errorw("error building pipeline", err)
 		res.Error = err.Error()
 		return res
 	}
-	r.pipeline = p
-	err = p.Start()
+
+	start := time.Now()
+	err = r.pipeline.Start()
 	if err != nil {
-		logger.Errorw("error running gstreamer", err)
+		logger.Errorw("error running pipeline", err)
 		res.Error = err.Error()
 		return res
 	}
-
 	res.Duration = time.Since(start).Milliseconds() / 1000
 
 	if s3, ok := req.Output.(*livekit.StartRecordingRequest_S3Url); ok && !r.conf.Test {
@@ -117,7 +96,6 @@ func (r *Recorder) Run(recordingId string, req *livekit.StartRecordingRequest) *
 			res.Error = err.Error()
 			return res
 		}
-
 		res.DownloadUrl = s3.S3Url
 	}
 
@@ -128,8 +106,7 @@ func (r *Recorder) getPipeline(req *livekit.StartRecordingRequest) (*pipeline.Pi
 	switch req.Output.(type) {
 	case *livekit.StartRecordingRequest_Rtmp:
 		return pipeline.NewRtmpPipeline(req.Output.(*livekit.StartRecordingRequest_Rtmp).Rtmp.Urls, req.Options)
-	case *livekit.StartRecordingRequest_S3Url:
-	case *livekit.StartRecordingRequest_File:
+	case *livekit.StartRecordingRequest_S3Url, *livekit.StartRecordingRequest_File:
 		return pipeline.NewFilePipeline(r.filename, req.Options)
 	}
 	return nil, errors.New("output missing")
@@ -154,17 +131,8 @@ func (r *Recorder) Stop() {
 	}
 }
 
-func (r *Recorder) Close() error {
-	if r.chromeCancel != nil {
-		r.chromeCancel()
-		r.chromeCancel = nil
-	}
-	if r.xvfb != nil {
-		err := r.xvfb.Process.Signal(os.Interrupt)
-		if err != nil {
-			return err
-		}
-		r.xvfb = nil
-	}
-	return nil
+// should only be called after pipeline completes
+func (r *Recorder) Close() {
+	r.display.Close()
+	r.display = nil
 }

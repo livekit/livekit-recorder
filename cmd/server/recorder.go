@@ -39,6 +39,9 @@ func runRecorder(c *cli.Context) error {
 	}()
 
 	res := rec.Run("standalone", req)
+	logger.Infow("recording complete",
+		"error", res.Error, "duration", res.Duration, "url", res.DownloadUrl)
+
 	if res.Error == "" {
 		return nil
 	}

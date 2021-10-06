@@ -5,6 +5,7 @@ package display
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 
 	"github.com/chromedp/chromedp"
@@ -13,18 +14,35 @@ import (
 	"github.com/livekit/livekit-recorder/pkg/config"
 )
 
-func LaunchXvfb(width, height, depth int) (*exec.Cmd, error) {
+type Display struct {
+	xvfb         *exec.Cmd
+	chromeCancel func()
+}
+
+func New() *Display { return &Display{} }
+
+func (d *Display) Launch(url string, width, height, depth int) error {
+	if err := d.launchXvfb(width, height, depth); err != nil {
+		return err
+	}
+	if err := d.launchChrome(url, width, height); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *Display) launchXvfb(width, height, depth int) error {
 	dims := fmt.Sprintf("%dx%dx%d", width, height, depth)
 	logger.Debugw("launching xvfb", "dims", dims)
 	xvfb := exec.Command("Xvfb", config.Display, "-screen", "0", dims, "-ac", "-nolisten", "tcp")
 	if err := xvfb.Start(); err != nil {
-		return nil, err
+		return err
 	}
-
-	return xvfb, nil
+	d.xvfb = xvfb
+	return nil
 }
 
-func LaunchChrome(url string, width, height int) (func(), error) {
+func (d *Display) launchChrome(url string, width, height int) error {
 	logger.Debugw("launching chrome")
 
 	opts := []chromedp.ExecAllocatorOption{
@@ -69,5 +87,20 @@ func LaunchChrome(url string, width, height int) (func(), error) {
 
 	allocCtx, _ := chromedp.NewExecAllocator(context.Background(), opts...)
 	ctx, cancel := chromedp.NewContext(allocCtx)
-	return cancel, chromedp.Run(ctx, chromedp.Navigate(url))
+	d.chromeCancel = cancel
+	return chromedp.Run(ctx, chromedp.Navigate(url))
+}
+
+func (d *Display) Close() {
+	if d.chromeCancel != nil {
+		d.chromeCancel()
+		d.chromeCancel = nil
+	}
+	if d.xvfb != nil {
+		err := d.xvfb.Process.Signal(os.Interrupt)
+		if err != nil {
+			logger.Errorw("failed to kill xvfb", err)
+		}
+		d.xvfb = nil
+	}
 }
