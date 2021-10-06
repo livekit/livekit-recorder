@@ -5,11 +5,21 @@ package pipeline
 import (
 	"fmt"
 
+	"github.com/livekit/protocol/logger"
 	livekit "github.com/livekit/protocol/proto"
+	"github.com/tinyzimmer/go-glib/glib"
 	"github.com/tinyzimmer/go-gst/gst"
 )
 
-func NewRtmpPipeline(rtmp []string, options *livekit.RecordingOptions) (*gst.Pipeline, error) {
+func init() {
+	gst.Init(nil)
+}
+
+type Pipeline struct {
+	pipeline *gst.Pipeline
+}
+
+func NewRtmpPipeline(rtmp []string, options *livekit.RecordingOptions) (*Pipeline, error) {
 	output, err := getRtmpOutput(rtmp)
 	if err != nil {
 		return nil, err
@@ -17,7 +27,7 @@ func NewRtmpPipeline(rtmp []string, options *livekit.RecordingOptions) (*gst.Pip
 	return newPipeline(output, options)
 }
 
-func NewFilePipeline(filename string, options *livekit.RecordingOptions) (*gst.Pipeline, error) {
+func NewFilePipeline(filename string, options *livekit.RecordingOptions) (*Pipeline, error) {
 	output, err := getFileOutput(filename)
 	if err != nil {
 		return nil, err
@@ -25,7 +35,7 @@ func NewFilePipeline(filename string, options *livekit.RecordingOptions) (*gst.P
 	return newPipeline(output, options)
 }
 
-func newPipeline(output *Output, options *livekit.RecordingOptions) (*gst.Pipeline, error) {
+func newPipeline(output *Output, options *livekit.RecordingOptions) (*Pipeline, error) {
 	audioSource, err := getAudioSource(options.AudioBitrate, options.AudioFrequency)
 	if err != nil {
 		return nil, err
@@ -71,5 +81,40 @@ func newPipeline(output *Output, options *livekit.RecordingOptions) (*gst.Pipeli
 		return nil, err
 	}
 
-	return pipeline, nil
+	return &Pipeline{pipeline: pipeline}, nil
+}
+
+func (p *Pipeline) Start() error {
+	loop := glib.NewMainLoop(glib.MainContextDefault(), false)
+	p.pipeline.GetPipelineBus().AddWatch(func(msg *gst.Message) bool {
+		switch msg.Type() {
+		case gst.MessageEOS:
+			logger.Infow("EOS received")
+			_ = p.pipeline.BlockSetState(gst.StateNull)
+			logger.Infow("pipeline stopped")
+			loop.Quit()
+		case gst.MessageError:
+			gErr := msg.ParseError()
+			logger.Errorw("message error", gErr, "debug", gErr.DebugString())
+			loop.Quit()
+		default:
+			fmt.Println(msg)
+		}
+		return true
+	})
+
+	// start playing
+	err := p.pipeline.SetState(gst.StatePlaying)
+	if err != nil {
+		return err
+	}
+
+	// Block and iterate on the main loop
+	loop.Run()
+	return nil
+}
+
+func (p *Pipeline) Close() {
+	logger.Debugw("Sending EOS to pipeline")
+	p.pipeline.SendEvent(gst.NewEOSEvent())
 }

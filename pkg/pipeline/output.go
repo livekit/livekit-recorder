@@ -63,7 +63,11 @@ func getFileOutput(filename string) (*Output, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = sink.Set("location", filename)
+	err = sink.SetProperty("location", filename)
+	if err != nil {
+		return nil, err
+	}
+	err = sink.SetProperty("sync", false)
 	if err != nil {
 		return nil, err
 	}

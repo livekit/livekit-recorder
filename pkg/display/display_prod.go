@@ -1,6 +1,6 @@
 // +build !test
 
-package recorder
+package display
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	"github.com/livekit/livekit-recorder/pkg/config"
 )
 
-func (r *Recorder) launchXvfb(width, height, depth int) (*exec.Cmd, error) {
+func LaunchXvfb(width, height, depth int) (*exec.Cmd, error) {
 	dims := fmt.Sprintf("%dx%dx%d", width, height, depth)
 	logger.Debugw("launching xvfb", "dims", dims)
 	xvfb := exec.Command("Xvfb", config.Display, "-screen", "0", dims, "-ac", "-nolisten", "tcp")
@@ -24,7 +24,7 @@ func (r *Recorder) launchXvfb(width, height, depth int) (*exec.Cmd, error) {
 	return xvfb, nil
 }
 
-func (r *Recorder) launchChrome(url string, width, height int) (func(), error) {
+func LaunchChrome(url string, width, height int) (func(), error) {
 	logger.Debugw("launching chrome")
 
 	opts := []chromedp.ExecAllocatorOption{

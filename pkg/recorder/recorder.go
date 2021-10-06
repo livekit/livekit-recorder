@@ -11,6 +11,8 @@ import (
 	livekit "github.com/livekit/protocol/proto"
 
 	"github.com/livekit/livekit-recorder/pkg/config"
+	"github.com/livekit/livekit-recorder/pkg/display"
+	"github.com/livekit/livekit-recorder/pkg/pipeline"
 )
 
 type Recorder struct {
@@ -20,7 +22,7 @@ type Recorder struct {
 	filename     string
 	xvfb         *exec.Cmd
 	chromeCancel func()
-	pipeline     *Pipeline
+	pipeline     *pipeline.Pipeline
 }
 
 func NewRecorder(conf *config.Config) *Recorder {
@@ -70,14 +72,14 @@ func (r *Recorder) Init(req *livekit.StartRecordingRequest) error {
 	}
 
 	// Xvfb
-	xvfb, err := r.launchXvfb(width, height, int(req.Options.Depth))
+	xvfb, err := display.LaunchXvfb(width, height, int(req.Options.Depth))
 	if err != nil {
 		logger.Errorw("error launching xvfb", err)
 	}
 	r.xvfb = xvfb
 
 	// Chrome
-	cancel, err := r.launchChrome(input, width, height)
+	cancel, err := display.LaunchChrome(input, width, height)
 	if err != nil {
 		logger.Errorw("error launching chrome", err)
 		return err
@@ -94,9 +96,16 @@ func (r *Recorder) Run(recordingId string, req *livekit.StartRecordingRequest) *
 		"error", res.Error, "duration", res.Duration, "url", res.DownloadUrl)
 
 	start := time.Now()
-	err = r.runGStreamer(req)
+	p, err := r.getPipeline(req)
 	if err != nil {
-		logger.Errorw("error launching gstreamer", err)
+		logger.Errorw("error building pipeline", err)
+		res.Error = err.Error()
+		return res
+	}
+	r.pipeline = p
+	err = p.Start()
+	if err != nil {
+		logger.Errorw("error running gstreamer", err)
 		res.Error = err.Error()
 		return res
 	}
@@ -113,6 +122,17 @@ func (r *Recorder) Run(recordingId string, req *livekit.StartRecordingRequest) *
 	}
 
 	return res
+}
+
+func (r *Recorder) getPipeline(req *livekit.StartRecordingRequest) (*pipeline.Pipeline, error) {
+	switch req.Output.(type) {
+	case *livekit.StartRecordingRequest_Rtmp:
+		return pipeline.NewRtmpPipeline(req.Output.(*livekit.StartRecordingRequest_Rtmp).Rtmp.Urls, req.Options)
+	case *livekit.StartRecordingRequest_S3Url:
+	case *livekit.StartRecordingRequest_File:
+		return pipeline.NewFilePipeline(r.filename, req.Options)
+	}
+	return nil, errors.New("output missing")
 }
 
 // TODO
