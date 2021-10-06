@@ -5,27 +5,28 @@ package pipeline
 import (
 	"fmt"
 
+	livekit "github.com/livekit/protocol/proto"
 	"github.com/tinyzimmer/go-gst/gst"
 )
 
-func NewRtmpPipeline(rtmp []string) (*gst.Pipeline, error) {
+func NewRtmpPipeline(rtmp []string, options *livekit.RecordingOptions) (*gst.Pipeline, error) {
 	output, err := getRtmpOutput(rtmp)
 	if err != nil {
 		return nil, err
 	}
-	return newPipeline(output)
+	return newPipeline(output, options)
 }
 
-func NewFilePipeline(filename string) (*gst.Pipeline, error) {
+func NewFilePipeline(filename string, options *livekit.RecordingOptions) (*gst.Pipeline, error) {
 	output, err := getFileOutput(filename)
 	if err != nil {
 		return nil, err
 	}
-	return newPipeline(output)
+	return newPipeline(output, options)
 }
 
-func newPipeline(output *Output) (*gst.Pipeline, error) {
-	audioSource, err := getAudioSource()
+func newPipeline(output *Output, options *livekit.RecordingOptions) (*gst.Pipeline, error) {
+	audioSource, err := getAudioSource(options.AudioFrequency)
 	if err != nil {
 		return nil, err
 	}

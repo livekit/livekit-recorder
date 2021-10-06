@@ -2,7 +2,11 @@
 
 package pipeline
 
-import "github.com/tinyzimmer/go-gst/gst"
+import (
+	"fmt"
+
+	"github.com/tinyzimmer/go-gst/gst"
+)
 
 type AudioSource struct {
 	elements   []*gst.Element
@@ -17,14 +21,23 @@ func (s *AudioSource) GetSourcePad() *gst.Pad {
 	return s.srcElement.GetStaticPad("src")
 }
 
-// TODO: bitrate and frequency
-func getAudioSource() (*AudioSource, error) {
+func getAudioSource(frequency int32) (*AudioSource, error) {
 	pulseSrc, err := gst.NewElement("pulsesrc")
 	if err != nil {
 		return nil, err
 	}
 
 	audioConvert, err := gst.NewElement("audioconvert")
+	if err != nil {
+		return nil, err
+	}
+
+	capsFilter, err := gst.NewElement("capsfilter")
+	if err != nil {
+		return nil, err
+	}
+	capsString := fmt.Sprintf("audio/x-raw,format=S16LE,layout=interleaved,rate=%d,channels=2", frequency)
+	err = capsFilter.SetProperty("caps", gst.NewCapsFromString(capsString))
 	if err != nil {
 		return nil, err
 	}
