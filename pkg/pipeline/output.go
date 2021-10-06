@@ -13,10 +13,6 @@ type Output struct {
 	videoPad string
 }
 
-func (s *Output) LinkElements() error {
-	return s.mux.Link(s.sink)
-}
-
 func (s *Output) GetAudioSinkPad() *gst.Pad {
 	return s.mux.GetRequestPad(s.audioPad)
 }
@@ -55,6 +51,10 @@ func getRtmpOutput(rtmp []string) (*Output, error) {
 
 func getFileOutput(filename string) (*Output, error) {
 	mux, err := gst.NewElement("mp4mux")
+	if err != nil {
+		return nil, err
+	}
+	err = mux.SetProperty("faststart", true)
 	if err != nil {
 		return nil, err
 	}

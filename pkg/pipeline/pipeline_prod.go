@@ -17,6 +17,9 @@ func init() {
 
 type Pipeline struct {
 	pipeline *gst.Pipeline
+	audio    *AudioSource
+	video    *VideoSource
+	output   *Output
 }
 
 func NewRtmpPipeline(rtmp []string, options *livekit.RecordingOptions) (*Pipeline, error) {
@@ -24,7 +27,11 @@ func NewRtmpPipeline(rtmp []string, options *livekit.RecordingOptions) (*Pipelin
 	if err != nil {
 		return nil, err
 	}
-	return newPipeline(output, options)
+	p, err := newPipeline(output, options)
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
 }
 
 func NewFilePipeline(filename string, options *livekit.RecordingOptions) (*Pipeline, error) {
@@ -32,7 +39,11 @@ func NewFilePipeline(filename string, options *livekit.RecordingOptions) (*Pipel
 	if err != nil {
 		return nil, err
 	}
-	return newPipeline(output, options)
+	p, err := newPipeline(output, options)
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
 }
 
 func newPipeline(output *Output, options *livekit.RecordingOptions) (*Pipeline, error) {
@@ -58,15 +69,15 @@ func newPipeline(output *Output, options *livekit.RecordingOptions) (*Pipeline, 
 	}
 
 	// link elements
-	err = audioSource.LinkElements()
+	err = gst.ElementLinkMany(audioSource.elements...)
 	if err != nil {
 		return nil, err
 	}
-	err = videoSource.LinkElements()
+	err = gst.ElementLinkMany(videoSource.elements...)
 	if err != nil {
 		return nil, err
 	}
-	err = output.LinkElements()
+	err = output.mux.Link(output.sink)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +92,12 @@ func newPipeline(output *Output, options *livekit.RecordingOptions) (*Pipeline, 
 		return nil, err
 	}
 
-	return &Pipeline{pipeline: pipeline}, nil
+	return &Pipeline{
+		pipeline: pipeline,
+		audio:    audioSource,
+		video:    videoSource,
+		output:   output,
+	}, nil
 }
 
 func (p *Pipeline) Start() error {

@@ -9,16 +9,16 @@ import (
 )
 
 type VideoSource struct {
-	elements   []*gst.Element
-	srcElement *gst.Element
-}
-
-func (s *VideoSource) LinkElements() error {
-	return gst.ElementLinkMany(s.elements...)
+	elements []*gst.Element
+	src      *gst.Element
+	convert  *gst.Element
+	filter   *gst.Element
+	encoder  *gst.Element
+	queue    *gst.Element
 }
 
 func (s *VideoSource) GetSourcePad() *gst.Pad {
-	return s.srcElement.GetStaticPad("src")
+	return s.queue.GetStaticPad("src")
 }
 
 func getVideoSource(bitrate, framerate int32) (*VideoSource, error) {
@@ -61,9 +61,17 @@ func getVideoSource(bitrate, framerate int32) (*VideoSource, error) {
 	if err != nil {
 		return nil, err
 	}
+	err = videoQueue.SetProperty("flush-on-eos", true)
+	if err != nil {
+		return nil, err
+	}
 
 	return &VideoSource{
-		elements:   []*gst.Element{xImageSrc, videoConvert, capsFilter, x264Enc, videoQueue},
-		srcElement: videoQueue,
+		elements: []*gst.Element{xImageSrc, videoConvert, capsFilter, x264Enc, videoQueue},
+		src:      xImageSrc,
+		convert:  videoConvert,
+		filter:   capsFilter,
+		encoder:  x264Enc,
+		queue:    videoQueue,
 	}, nil
 }

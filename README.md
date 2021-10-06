@@ -21,7 +21,7 @@ api_secret: livekit server api secret (required if using templates without suppl
 ws_url: livekit server ws url (required if using templates)
 health_port: http port to serve status (optional)
 log_level: valid levels are debug, info, warn, error, fatal, or panic. Defaults to debug
-gst_log_level: (string) valid levels are "0" (none) to "9" (memdump). Anything above "3" can be very noisy. Defaults to "3".
+gst_log_level: valid levels are 0 (none) to 9 (memdump). Anything above 3 (warning) can be very noisy. Defaults to 3.
 redis: (service mode only)
     address: redis address, including port
     username: redis username (optional)

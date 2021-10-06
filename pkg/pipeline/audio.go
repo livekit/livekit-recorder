@@ -9,16 +9,16 @@ import (
 )
 
 type AudioSource struct {
-	elements   []*gst.Element
-	srcElement *gst.Element
-}
-
-func (s *AudioSource) LinkElements() error {
-	return gst.ElementLinkMany(s.elements...)
+	elements []*gst.Element
+	src      *gst.Element
+	convert  *gst.Element
+	filter   *gst.Element
+	encoder  *gst.Element
+	queue    *gst.Element
 }
 
 func (s *AudioSource) GetSourcePad() *gst.Pad {
-	return s.srcElement.GetStaticPad("src")
+	return s.queue.GetStaticPad("src")
 }
 
 func getAudioSource(bitrate, frequency int32) (*AudioSource, error) {
@@ -55,9 +55,17 @@ func getAudioSource(bitrate, frequency int32) (*AudioSource, error) {
 	if err != nil {
 		return nil, err
 	}
+	err = audioQueue.SetProperty("flush-on-eos", true)
+	if err != nil {
+		return nil, err
+	}
 
 	return &AudioSource{
-		elements:   []*gst.Element{pulseSrc, audioConvert, capsFilter, faac, audioQueue},
-		srcElement: audioQueue,
+		elements: []*gst.Element{pulseSrc, audioConvert, capsFilter, faac, audioQueue},
+		src:      pulseSrc,
+		convert:  audioConvert,
+		filter:   capsFilter,
+		encoder:  faac,
+		queue:    audioQueue,
 	}, nil
 }

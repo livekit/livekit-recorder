@@ -17,7 +17,7 @@ type Config struct {
 	WsUrl       string                    `yaml:"ws_url"`
 	HealthPort  int                       `yaml:"health_port"`
 	LogLevel    string                    `yaml:"log_level"`
-	GstLogLevel string                    `yaml:"gst_log_level"`
+	GstLogLevel int                       `yaml:"gst_log_level"`
 	Redis       RedisConfig               `yaml:"redis"`
 	S3          S3Config                  `yaml:"s3"`
 	Defaults    *livekit.RecordingOptions `yaml:"defaults"`
@@ -41,7 +41,7 @@ func NewConfig(confString string) (*Config, error) {
 	// start with defaults
 	conf := &Config{
 		LogLevel:    "debug",
-		GstLogLevel: "3",
+		GstLogLevel: 3,
 		Defaults: &livekit.RecordingOptions{
 			Width:          1920,
 			Height:         1080,
@@ -67,7 +67,8 @@ func NewConfig(confString string) (*Config, error) {
 	if err := os.Setenv("DISPLAY", Display); err != nil {
 		return nil, err
 	}
-	if err := os.Setenv("GST_DEBUG", conf.GstLogLevel); err != nil {
+	// TODO: fix
+	if err := os.Setenv("GST_DEBUG", fmt.Sprint(conf.GstLogLevel)); err != nil {
 		return nil, err
 	}
 
