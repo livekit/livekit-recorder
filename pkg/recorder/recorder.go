@@ -62,7 +62,7 @@ func (r *Recorder) Init(req *livekit.StartRecordingRequest) error {
 		return errors.New("missing output")
 	}
 
-	if r.conf.Test {
+	if r.conf.Mock {
 		return nil
 	}
 
@@ -91,7 +91,7 @@ func (r *Recorder) Run(recordingId string, req *livekit.StartRecordingRequest) *
 	}
 	res.Duration = time.Since(start).Milliseconds() / 1000
 
-	if s3, ok := req.Output.(*livekit.StartRecordingRequest_S3Url); ok && !r.conf.Test {
+	if s3, ok := req.Output.(*livekit.StartRecordingRequest_S3Url); ok && !r.conf.Mock {
 		if err = r.upload(s3.S3Url); err != nil {
 			res.Error = err.Error()
 			return res

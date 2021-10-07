@@ -12,16 +12,15 @@ import (
 const Display = ":99"
 
 type Config struct {
-	ApiKey      string                    `yaml:"api_key"`
-	ApiSecret   string                    `yaml:"api_secret"`
-	WsUrl       string                    `yaml:"ws_url"`
-	HealthPort  int                       `yaml:"health_port"`
-	LogLevel    string                    `yaml:"log_level"`
-	GstLogLevel int                       `yaml:"gst_log_level"`
-	Redis       RedisConfig               `yaml:"redis"`
-	S3          S3Config                  `yaml:"s3"`
-	Defaults    *livekit.RecordingOptions `yaml:"defaults"`
-	Test        bool                      `yaml:"-"`
+	ApiKey     string                    `yaml:"api_key"`
+	ApiSecret  string                    `yaml:"api_secret"`
+	WsUrl      string                    `yaml:"ws_url"`
+	HealthPort int                       `yaml:"health_port"`
+	LogLevel   string                    `yaml:"log_level"`
+	Redis      RedisConfig               `yaml:"redis"`
+	S3         S3Config                  `yaml:"s3"`
+	Defaults   *livekit.RecordingOptions `yaml:"defaults"`
+	Mock       bool                      `yaml:"-"`
 }
 
 type RedisConfig struct {
@@ -40,8 +39,7 @@ type S3Config struct {
 func NewConfig(confString string) (*Config, error) {
 	// start with defaults
 	conf := &Config{
-		LogLevel:    "debug",
-		GstLogLevel: 3,
+		LogLevel: "debug",
 		Defaults: &livekit.RecordingOptions{
 			Width:          1920,
 			Height:         1080,
@@ -67,7 +65,19 @@ func NewConfig(confString string) (*Config, error) {
 	if err := os.Setenv("DISPLAY", Display); err != nil {
 		return nil, err
 	}
-	if err := os.Setenv("GST_DEBUG", fmt.Sprint(conf.GstLogLevel)); err != nil {
+
+	var gstDebug int
+	switch conf.LogLevel {
+	case "debug":
+		gstDebug = 3
+	case "info", "warn":
+		gstDebug = 2
+	case "error":
+		gstDebug = 1
+	case "panic":
+		gstDebug = 0
+	}
+	if err := os.Setenv("GST_DEBUG", fmt.Sprint(gstDebug)); err != nil {
 		return nil, err
 	}
 
@@ -88,7 +98,7 @@ func TestConfig() *Config {
 			AudioFrequency: 44100,
 			VideoBitrate:   4500,
 		},
-		Test: true,
+		Mock: true,
 	}
 }
 
