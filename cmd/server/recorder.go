@@ -31,16 +31,19 @@ func runRecorder(c *cli.Context) error {
 
 	stopChan := make(chan os.Signal, 1)
 	signal.Notify(stopChan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-
 	go func() {
 		sig := <-stopChan
 		logger.Infow("Exit requested, stopping recording and shutting down", "signal", sig)
 		rec.Stop()
 	}()
 
-	res := rec.Run("standalone", req)
-	logger.Infow("recording complete",
-		"error", res.Error, "duration", res.Duration, "url", res.DownloadUrl)
+	res := rec.Run("standalone")
+	if res.Error != "" {
+		logger.Errorw("recording failed", errors.New(res.Error))
+	} else {
+		logger.Infow("recording complete",
+			"duration", res.Duration, "url", res.DownloadUrl)
+	}
 
 	if res.Error == "" {
 		return nil

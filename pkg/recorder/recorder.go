@@ -15,6 +15,7 @@ import (
 
 type Recorder struct {
 	conf *config.Config
+	req  *livekit.StartRecordingRequest
 
 	filename string
 	display  *display.Display
@@ -58,20 +59,21 @@ func (r *Recorder) Init(req *livekit.StartRecordingRequest) error {
 		return errors.New("missing output")
 	}
 
-	if r.conf.Mock {
-		return nil
-	}
-
+	r.req = req
 	r.display = display.New()
 	return r.display.Launch(url, int(req.Options.Width), int(req.Options.Height), int(req.Options.Depth))
 }
 
 // Run blocks until completion
-func (r *Recorder) Run(recordingId string, req *livekit.StartRecordingRequest) *livekit.RecordingResult {
-	var err error
+func (r *Recorder) Run(recordingId string) *livekit.RecordingResult {
 	res := &livekit.RecordingResult{Id: recordingId}
+	if r.req == nil {
+		res.Error = "recorder not initialized"
+		return res
+	}
 
-	r.pipeline, err = r.getPipeline(req)
+	var err error
+	r.pipeline, err = r.getPipeline(r.req)
 	if err != nil {
 		logger.Errorw("error building pipeline", err)
 		res.Error = err.Error()
@@ -87,7 +89,7 @@ func (r *Recorder) Run(recordingId string, req *livekit.StartRecordingRequest) *
 	}
 	res.Duration = time.Since(start).Milliseconds() / 1000
 
-	if s3, ok := req.Output.(*livekit.StartRecordingRequest_S3Url); ok && !r.conf.Mock {
+	if s3, ok := r.req.Output.(*livekit.StartRecordingRequest_S3Url); ok {
 		if err = r.upload(s3.S3Url); err != nil {
 			res.Error = err.Error()
 			return res
@@ -131,5 +133,4 @@ func (r *Recorder) Stop() {
 // should only be called after pipeline completes
 func (r *Recorder) Close() {
 	r.display.Close()
-	r.display = nil
 }

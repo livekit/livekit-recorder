@@ -20,7 +20,6 @@ type Config struct {
 	Redis      RedisConfig               `yaml:"redis"`
 	S3         S3Config                  `yaml:"s3"`
 	Defaults   *livekit.RecordingOptions `yaml:"defaults"`
-	Mock       bool                      `yaml:"-"`
 }
 
 type RedisConfig struct {
@@ -98,7 +97,6 @@ func TestConfig() *Config {
 			AudioFrequency: 44100,
 			VideoBitrate:   4500,
 		},
-		Mock: true,
 	}
 }
 

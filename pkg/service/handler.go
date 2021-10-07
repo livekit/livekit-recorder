@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/livekit/protocol/logger"
@@ -43,8 +44,12 @@ func (s *Service) handleRecording() {
 				logger.Errorw("Failed to write results", err)
 			}
 
-			logger.Infow("recording complete", "recordingId", res.Id,
-				"error", res.Error, "duration", res.Duration, "url", res.DownloadUrl)
+			if res.Error != "" {
+				logger.Errorw("recording failed", errors.New(res.Error), "recordingId", res.Id)
+			} else {
+				logger.Infow("recording complete", "recordingId", res.Id,
+					"duration", res.Duration, "url", res.DownloadUrl)
+			}
 
 			// clean up
 			s.rec.Close()
@@ -87,7 +92,7 @@ func (s *Service) handleRequest(req *livekit.RecordingRequest, result chan *live
 
 		go func() {
 			// blocks until recorder is finished
-			result <- s.rec.Run(s.recordingId, start)
+			result <- s.rec.Run(s.recordingId)
 		}()
 		s.status.Store(Recording)
 	case *livekit.RecordingRequest_AddOutput:
