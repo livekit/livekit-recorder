@@ -20,10 +20,15 @@ import (
 
 func main() {
 	app := &cli.App{
-		Name:        "livekit-recorder-service",
-		Usage:       "LiveKit Recorder Service",
-		Description: "runs the recording service",
+		Name:        "livekit-recorder",
+		Usage:       "LiveKit Recorder",
+		Description: "runs the recorder in standalone mode or as a service",
 		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:    "service-mode",
+				Usage:   "run recorder service",
+				EnvVars: []string{"SERVICE-MODE"},
+			},
 			&cli.StringFlag{
 				Name:  "config",
 				Usage: "path to LiveKit recording config defaults",
@@ -33,36 +38,30 @@ func main() {
 				Usage:   "Default LiveKit recording config in JSON, typically passed in as an env var in a container",
 				EnvVars: []string{"LIVEKIT_RECORDER_CONFIG"},
 			},
-		},
-		Commands: []*cli.Command{
-			{
-				Name:   "start-recording",
-				Usage:  "Starts a controller server",
-				Action: runRecorder,
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:  "request",
-						Usage: "path to json StartRecordingRequest file",
-					},
-					&cli.StringFlag{
-						Name:    "request-body",
-						Usage:   "StartRecordingRequest json",
-						EnvVars: []string{"RECORDING_REQUEST"},
-					},
-				},
+			&cli.StringFlag{
+				Name:  "request",
+				Usage: "path to json StartRecordingRequest file",
 			},
-			{
-				Name:   "start-service",
-				Usage:  "Starts an origin server",
-				Action: runService,
+			&cli.StringFlag{
+				Name:    "request-body",
+				Usage:   "StartRecordingRequest json",
+				EnvVars: []string{"RECORDING_REQUEST"},
 			},
 		},
+		Action:  run,
 		Version: version.Version,
 	}
 
 	if err := app.Run(os.Args); err != nil {
 		fmt.Println(err)
 	}
+}
+
+func run(c *cli.Context) error {
+	if c.Bool("service-mode") {
+		return runService(c)
+	}
+	return runRecorder(c)
 }
 
 func getConfig(c *cli.Context) (*config.Config, error) {

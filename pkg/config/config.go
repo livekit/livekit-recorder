@@ -102,7 +102,7 @@ func TestConfig() *Config {
 	}
 }
 
-func UpdateRequestParams(conf *Config, req *livekit.StartRecordingRequest) {
+func (c *Config) ApplyDefaults(req *livekit.StartRecordingRequest) {
 	if req.Options == nil {
 		req.Options = &livekit.RecordingOptions{}
 	}
@@ -113,23 +113,23 @@ func UpdateRequestParams(conf *Config, req *livekit.StartRecordingRequest) {
 	}
 
 	if req.Options.Width == 0 || req.Options.Height == 0 {
-		req.Options.Width = conf.Defaults.Width
-		req.Options.Height = conf.Defaults.Height
+		req.Options.Width = c.Defaults.Width
+		req.Options.Height = c.Defaults.Height
 	}
 	if req.Options.Depth == 0 {
-		req.Options.Depth = conf.Defaults.Depth
+		req.Options.Depth = c.Defaults.Depth
 	}
 	if req.Options.Framerate == 0 {
-		req.Options.Framerate = conf.Defaults.Framerate
+		req.Options.Framerate = c.Defaults.Framerate
 	}
 	if req.Options.AudioBitrate == 0 {
-		req.Options.AudioBitrate = conf.Defaults.AudioBitrate
+		req.Options.AudioBitrate = c.Defaults.AudioBitrate
 	}
 	if req.Options.AudioFrequency == 0 {
-		req.Options.AudioFrequency = conf.Defaults.AudioFrequency
+		req.Options.AudioFrequency = c.Defaults.AudioFrequency
 	}
 	if req.Options.VideoBitrate == 0 {
-		req.Options.VideoBitrate = conf.Defaults.VideoBitrate
+		req.Options.VideoBitrate = c.Defaults.VideoBitrate
 	}
 
 	return

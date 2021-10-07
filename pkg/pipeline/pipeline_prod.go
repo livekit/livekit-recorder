@@ -11,6 +11,7 @@ import (
 	"github.com/tinyzimmer/go-gst/gst"
 )
 
+// gst.Init needs to be called before using gst but after gst package loads
 var initialized = false
 
 type Pipeline struct {

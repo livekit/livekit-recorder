@@ -26,7 +26,7 @@ term_handler() {
 trap 'kill ${!}; term_handler' SIGTERM
 
 # Run service
-XDG_RUNTIME_DIR=$PATH:~/.cache/xdgr ./livekit-recorder start-recording &
+XDG_RUNTIME_DIR=$PATH:~/.cache/xdgr ./livekit-recorder &
 pid="$!"
 
 # Wait forever

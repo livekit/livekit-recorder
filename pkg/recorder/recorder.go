@@ -29,7 +29,7 @@ func NewRecorder(conf *config.Config) *Recorder {
 }
 
 func (r *Recorder) Init(req *livekit.StartRecordingRequest) error {
-	config.UpdateRequestParams(r.conf, req)
+	r.conf.ApplyDefaults(req)
 
 	// validate input
 	url, err := r.getInputUrl(req)

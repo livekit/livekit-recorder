@@ -58,95 +58,47 @@ See StartRecordingRequest [here](https://github.com/livekit/protocol/blob/main/l
 When using standalone mode, the request can be input as a json file. In service mode, these requests will be made through
 the LiveKit server's recording api.
 
-### Template input
+### Input
+
+You can input either a `url` to record from, or choose a `template` and a `layout`, and supply either a `room_name` or `token`.
 
 We currently have 4 templates available - grid or speaker, each available in light or dark.
-Just supply your server api key and secret, along with the websocket url.  
+Your config will need your server api key and secret, along with the websocket url.  
 Check out our [web README](https://github.com/livekit/livekit-recorder/tree/main/web) to learn more or create your own.
 
+### Output
+
+You can either output to a `file`, upload to an `s3_url`, or write to one or more `rtmp` `urls`.
+
+### Options
+
+You can also override any defaults set in your `config.yaml`.
+
+All request options:
 ```json
 {
+    "url": "<your-recording-domain.com>",
     "template": {
         "layout": "<grid|speaker>-<light|dark>",
-        "room_name": "<room-to-record>"
-    }
-    // output...
-}
-```
-Or, to use your own token instead of having the recorder generate one:
-```json
-{
-    "template": {
-        "layout": "<grid|speaker>-<light|dark>",
+        "room_name": "<room-to-record>",
         "token": "<token>"
-    }
-    // output...
-}
-```
-
-### Webpage input
-
-You can also save or stream any other webpage - just supply the url.
-```json
-{   
-    "url": "<your-recording-domain.com>"
-    // output...
-}
-```
-
-## Output
-
-### Save to file
-
-```json
-{
-    // input...
-    "file": "/out/recording.mp4"
-}
-```
-Note: your local mounted directory needs to exist, and the docker directory should match file output (i.e. `/app/out`)
-```bash
-mkdir -p ~/livekit/output
-
-docker run --rm \
-    -e LIVEKIT_RECORDER_CONFIG="$(cat config.yaml)" \
-    -e RECORDING_REQUEST="$(cat file.json)" \
-    -v ~/livekit/recordings:/out \
-    livekit/livekit-recorder
-```
-
-### Upload to S3
-
-```json
-{
-    // input...
-    "s3_url": "bucket/path/filename.mp4"
-}
-```
-
-```bash
-docker run --rm \
-    -e LIVEKIT_RECORDER_CONFIG="$(cat config.yaml)" \
-    -e RECORDING_REQUEST="$(cat s3.json)" \
-    livekit/livekit-recorder
-```
-
-### RTMP
-
-```json
-{
-    // input...
+    },
+    "file": "/out/recording.mp4",
+    "s3_url": "bucket/path/filename.mp4",
     "rtmp": {
         "urls": ["<rtmp://stream-url.com>"]
+    },
+    "options": {
+        "preset": "FULL_HD_60",
+        "width": 1920,
+        "height": 1080,
+        "depth": 24,
+        "framerate": 60,
+        "audio_bitrate": 128,
+        "audio_frequency": 44100,
+        "video_bitrate": 6000
     }
 }
-```
-
-```bash
-docker run --rm \
-    -e LIVEKIT_RECORDER_CONFIG="$(cat config.yaml)" \
-    -e RECORDING_REQUEST="$(cat rtmp.json)" \
-    livekit/livekit-recorder
 ```
 
 # Service Mode
@@ -180,8 +132,10 @@ If you want to try running against a local livekit server, you'll need to make a
 These changes allow the service to connect to your local redis instance from inside the docker container.
 Finally, to build and run:
 ```bash
-docker build -t recorder-svc . 
-docker run --network host -e REDIS_HOST="192.168.65.2:6379" recorder-svc
+docker build -t livekit-recorder .
+docker run --network host \
+    -e SERVICE_MODE=1 \
+    -e REDIS_HOST="192.168.65.2:6379" livekit-recorder
 ```
 
 You can then use our [cli](https://github.com/livekit/livekit-cli) to submit recording requests to your server.
@@ -209,24 +163,26 @@ basic.json:
     "layout": "speaker-dark",
     "room_name": "my-room"
   },
-  "file": "/out/test_recording.mp4"
+  "file": "/out/demo.mp4"
 }
 ```
 ```bash
 mkdir -p ~/livekit/output
 
-docker run --rm -e LIVEKIT_RECORDER_CONFIG="$(cat basic.json)" \
-    -v ~/livekit/output:/app/out \
+docker run --rm \
+    -e LIVEKIT_RECORDER_CONFIG="$(cat config.yaml)" \
+    -e RECORDING_REQUEST="$(cat basic.json)" \
+    -v ~/livekit/recordings:/out \
     livekit/livekit-recorder
 ```
 
-## Record custom url at 720p, with 2048kbps video bitrate
+## Record at 720p, with 2048kbps video bitrate, and upload result to s3
 
 s3.json:
 ```json
 {
-    "url": "https://your-recording-domain.com",
-    "s3Url": "bucket/path/filename.mp4",
+    "url": "https://www.youtube.com/watch?v=BHACKCNDMW8",
+    "s3_url": "bucket/path/filename.mp4",
     "options": {
         "width": "1280",
         "height": "720",
@@ -235,7 +191,10 @@ s3.json:
 }
 ```
 ```bash
-docker run --rm --name my-recorder -e LIVEKIT_RECORDER_CONFIG="$(cat s3.json)" livekit/livekit-recorder
+docker run --name my-recorder --rm \
+    -e LIVEKIT_RECORDER_CONFIG="$(cat config.yaml)" \
+    -e RECORDING_REQUEST="$(cat s3.json)" \
+    livekit/livekit-recorder
 ```
 ```bash
 docker stop my-recorder
@@ -259,7 +218,10 @@ twitch.json:
 }
 ```
 ```bash
-docker run --rm -e LIVEKIT_RECORDER_CONFIG="$(cat twitch.json)" livekit/livekit-recorder
+docker run --rm \
+    -e LIVEKIT_RECORDER_CONFIG="$(cat config.yaml)" \
+    -e RECORDING_REQUEST="$(cat twitch.json)" \
+    livekit/livekit-recorder
 ```
 
 ## Ending a recording
