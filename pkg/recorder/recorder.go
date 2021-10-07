@@ -16,7 +16,6 @@ import (
 type Recorder struct {
 	conf *config.Config
 
-	isStream bool
 	filename string
 	display  *display.Display
 	pipeline *pipeline.Pipeline
@@ -48,16 +47,13 @@ func (r *Recorder) Init(req *livekit.StartRecordingRequest) error {
 			return errors.New("s3 output must be s3://bucket/{path/}filename.mp4")
 		}
 		r.filename = s3[idx+1:]
-		r.isStream = false
 	case *livekit.StartRecordingRequest_Rtmp:
-		r.isStream = true
 	case *livekit.StartRecordingRequest_File:
 		filename := req.Output.(*livekit.StartRecordingRequest_File).File
 		if !strings.HasSuffix(filename, ".mp4") {
 			return errors.New("file output must be {path/}filename.mp4")
 		}
 		r.filename = filename
-		r.isStream = false
 	default:
 		return errors.New("missing output")
 	}
@@ -112,17 +108,18 @@ func (r *Recorder) getPipeline(req *livekit.StartRecordingRequest) (*pipeline.Pi
 	return nil, errors.New("output missing")
 }
 
-// TODO
-func (r *Recorder) AddOutput(rtmp string) error {
-	if !r.isStream {
-		return errors.New("cannot add stream output to file recording")
+func (r *Recorder) AddOutput(url string) error {
+	if r.pipeline == nil {
+		return errors.New("missing pipeline")
 	}
-	return nil
+	return r.pipeline.AddOutput(url)
 }
 
-// TODO
-func (r *Recorder) RemoveOutput(rtmp string) error {
-	return nil
+func (r *Recorder) RemoveOutput(url string) error {
+	if r.pipeline == nil {
+		return errors.New("missing pipeline")
+	}
+	return r.pipeline.RemoveOutput(url)
 }
 
 func (r *Recorder) Stop() {

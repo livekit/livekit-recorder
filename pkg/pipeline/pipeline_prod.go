@@ -3,6 +3,7 @@
 package pipeline
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/livekit/protocol/logger"
@@ -17,6 +18,7 @@ var initialized = false
 type Pipeline struct {
 	pipeline *gst.Pipeline
 	output   *Output
+	isStream bool
 }
 
 func NewRtmpPipeline(rtmp []string, options *livekit.RecordingOptions) (*Pipeline, error) {
@@ -33,6 +35,7 @@ func NewRtmpPipeline(rtmp []string, options *livekit.RecordingOptions) (*Pipelin
 	if err != nil {
 		return nil, err
 	}
+	p.isStream = true
 	return p, nil
 }
 
@@ -64,13 +67,13 @@ func newPipeline(output *Output, options *livekit.RecordingOptions) (*Pipeline, 
 		return nil, err
 	}
 
-	// build pipeline
+	// elements must be added to pipeline before linking
 	pipeline, err := gst.NewPipeline("pipeline")
 	if err != nil {
 		return nil, err
 	}
 	elements := append(audioSource.elements, videoSource.elements...)
-	err = pipeline.AddMany(append(elements, output.mux, output.sink)...)
+	err = pipeline.AddMany(append(elements, output.elements...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -84,18 +87,21 @@ func newPipeline(output *Output, options *livekit.RecordingOptions) (*Pipeline, 
 	if err != nil {
 		return nil, err
 	}
-	err = output.mux.Link(output.sink)
+	err = output.LinkElements()
 	if err != nil {
 		return nil, err
 	}
 
-	// link pads
+	// link mux and tee pads
 	if link := audioSource.GetSourcePad().Link(output.GetAudioSinkPad()); link != gst.PadLinkOK {
-		err = fmt.Errorf("pad link: %s", link.String())
-		return nil, err
+		return nil, fmt.Errorf("pad link: %s", link.String())
 	}
 	if link := videoSource.GetSourcePad().Link(output.GetVideoSinkPad()); link != gst.PadLinkOK {
-		err = fmt.Errorf("pad link: %s", link.String())
+		return nil, fmt.Errorf("pad link: %s", link.String())
+	}
+
+	err = output.LinkPads()
+	if err != nil {
 		return nil, err
 	}
 
@@ -133,6 +139,22 @@ func (p *Pipeline) Start() error {
 
 	// Block and iterate on the main loop
 	loop.Run()
+	return nil
+}
+
+func (p *Pipeline) AddOutput(url string) error {
+	if !p.isStream {
+		return errors.New("AddOutput can only be called on streams")
+	}
+
+	return nil
+}
+
+func (p *Pipeline) RemoveOutput(url string) error {
+	if !p.isStream {
+		return errors.New("RemoveOutput can only be called on streams")
+	}
+
 	return nil
 }
 
