@@ -12,6 +12,7 @@ import (
 
 	"github.com/livekit/livekit-recorder/pkg/config"
 	"github.com/livekit/livekit-recorder/pkg/messaging"
+	"github.com/livekit/livekit-recorder/pkg/pipeline"
 )
 
 func TestService(t *testing.T) {
@@ -51,7 +52,7 @@ func TestService(t *testing.T) {
 	})
 
 	t.Run("RPC validation", func(t *testing.T) {
-		require.Equal(t, "cannot add stream output to file recording",
+		require.Equal(t, pipeline.ErrCannotAddToFile,
 			recording.RPC(context.Background(), bus, id1, &livekit.RecordingRequest{
 				RequestId: utils.RandomSecret(),
 				Request: &livekit.RecordingRequest_AddOutput{
@@ -60,7 +61,7 @@ func TestService(t *testing.T) {
 						RtmpUrl:     "rtmp://fake-url.com?stream-id=xyz",
 					},
 				},
-			}).Error(),
+			}),
 		)
 	})
 

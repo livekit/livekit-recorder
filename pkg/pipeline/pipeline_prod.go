@@ -3,7 +3,6 @@
 package pipeline
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/livekit/protocol/logger"
@@ -17,26 +16,25 @@ var initialized = false
 
 type Pipeline struct {
 	pipeline *gst.Pipeline
-	output   *Output
-	isStream bool
+	output   *OutputBin
 }
 
-func NewRtmpPipeline(rtmp []string, options *livekit.RecordingOptions) (*Pipeline, error) {
+func NewRtmpPipeline(urls []string, options *livekit.RecordingOptions) (*Pipeline, error) {
 	if !initialized {
 		gst.Init(nil)
 		initialized = true
 	}
 
-	output, err := getRtmpOutput(rtmp)
+	input, err := newInputBin(true, options)
 	if err != nil {
 		return nil, err
 	}
-	p, err := newPipeline(output, options)
+	output, err := newRtmpOutputBin(urls)
 	if err != nil {
 		return nil, err
 	}
-	p.isStream = true
-	return p, nil
+
+	return newPipeline(input, output)
 }
 
 func NewFilePipeline(filename string, options *livekit.RecordingOptions) (*Pipeline, error) {
@@ -45,63 +43,40 @@ func NewFilePipeline(filename string, options *livekit.RecordingOptions) (*Pipel
 		initialized = true
 	}
 
-	output, err := getFileOutput(filename)
+	input, err := newInputBin(false, options)
 	if err != nil {
 		return nil, err
 	}
-	p, err := newPipeline(output, options)
+	output, err := newFileOutputBin(filename)
 	if err != nil {
 		return nil, err
 	}
-	return p, nil
+
+	return newPipeline(input, output)
 }
 
-func newPipeline(output *Output, options *livekit.RecordingOptions) (*Pipeline, error) {
-	audioSource, err := getAudioSource(options.AudioBitrate, options.AudioFrequency)
-	if err != nil {
-		return nil, err
-	}
-
-	videoSource, err := getVideoSource(options.VideoBitrate, options.Framerate)
-	if err != nil {
-		return nil, err
-	}
-
+func newPipeline(input *InputBin, output *OutputBin) (*Pipeline, error) {
 	// elements must be added to pipeline before linking
 	pipeline, err := gst.NewPipeline("pipeline")
 	if err != nil {
 		return nil, err
 	}
-	elements := append(audioSource.elements, videoSource.elements...)
-	err = pipeline.AddMany(append(elements, output.elements...)...)
-	if err != nil {
+
+	// add bins to pipeline
+	if err = pipeline.AddMany(input.bin.Element, output.bin.Element); err != nil {
 		return nil, err
 	}
 
-	// link elements
-	err = gst.ElementLinkMany(audioSource.elements...)
-	if err != nil {
+	// link bin elements
+	if err = input.Link(); err != nil {
 		return nil, err
 	}
-	err = gst.ElementLinkMany(videoSource.elements...)
-	if err != nil {
-		return nil, err
-	}
-	err = output.LinkElements()
-	if err != nil {
+	if err = output.Link(); err != nil {
 		return nil, err
 	}
 
-	// link mux and tee pads
-	if link := audioSource.GetSourcePad().Link(output.GetAudioSinkPad()); link != gst.PadLinkOK {
-		return nil, fmt.Errorf("pad link: %s", link.String())
-	}
-	if link := videoSource.GetSourcePad().Link(output.GetVideoSinkPad()); link != gst.PadLinkOK {
-		return nil, fmt.Errorf("pad link: %s", link.String())
-	}
-
-	err = output.LinkPads()
-	if err != nil {
+	// link bins
+	if err = input.bin.Link(output.bin.Element); err != nil {
 		return nil, err
 	}
 
@@ -111,7 +86,7 @@ func newPipeline(output *Output, options *livekit.RecordingOptions) (*Pipeline, 
 	}, nil
 }
 
-// TODO: split pipelines, restart second pipeline on failure
+// TODO: bin error handling
 func (p *Pipeline) Start() error {
 	loop := glib.NewMainLoop(glib.MainContextDefault(), false)
 	p.pipeline.GetPipelineBus().AddWatch(func(msg *gst.Message) bool {
@@ -143,22 +118,21 @@ func (p *Pipeline) Start() error {
 }
 
 func (p *Pipeline) AddOutput(url string) error {
-	if !p.isStream {
-		return errors.New("AddOutput can only be called on streams")
-	}
-
-	return nil
+	return p.output.AddRtmpSink(url)
 }
 
 func (p *Pipeline) RemoveOutput(url string) error {
-	if !p.isStream {
-		return errors.New("RemoveOutput can only be called on streams")
-	}
-
-	return nil
+	return p.output.RemoveRtmpSink(url)
 }
 
 func (p *Pipeline) Close() {
 	logger.Debugw("Sending EOS to pipeline")
 	p.pipeline.SendEvent(gst.NewEOSEvent())
+}
+
+func requireLink(src, sink *gst.Pad) error {
+	if linkReturn := src.Link(sink); linkReturn != gst.PadLinkOK {
+		return fmt.Errorf("pad link: %s", linkReturn.String())
+	}
+	return nil
 }

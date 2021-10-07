@@ -9,7 +9,22 @@ import (
 )
 
 type Pipeline struct {
-	kill chan struct{}
+	isStream bool
+	kill     chan struct{}
+}
+
+func NewRtmpPipeline(rtmp []string, options *livekit.RecordingOptions) (*Pipeline, error) {
+	return &Pipeline{
+		isStream: true,
+		kill:     make(chan struct{}, 1),
+	}, nil
+}
+
+func NewFilePipeline(filename string, options *livekit.RecordingOptions) (*Pipeline, error) {
+	return &Pipeline{
+		isStream: false,
+		kill:     make(chan struct{}, 1),
+	}, nil
 }
 
 func (p *Pipeline) Start() error {
@@ -20,18 +35,20 @@ func (p *Pipeline) Start() error {
 	return nil
 }
 
+func (p *Pipeline) AddOutput(url string) error {
+	if !p.isStream {
+		return ErrCannotAddToFile
+	}
+	return nil
+}
+
+func (p *Pipeline) RemoveOutput(url string) error {
+	if !p.isStream {
+		return ErrCannotRemoveFromFile
+	}
+	return nil
+}
+
 func (p *Pipeline) Close() {
 	p.kill <- struct{}{}
-}
-
-func NewRtmpPipeline(rtmp []string, options *livekit.RecordingOptions) (*Pipeline, error) {
-	return &Pipeline{
-		kill: make(chan struct{}, 1),
-	}, nil
-}
-
-func NewFilePipeline(filename string, options *livekit.RecordingOptions) (*Pipeline, error) {
-	return &Pipeline{
-		kill: make(chan struct{}, 1),
-	}, nil
 }
