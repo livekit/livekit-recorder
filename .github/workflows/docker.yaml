@@ -46,7 +46,6 @@ jobs:
 
       - name: Download Go modules
         run: go mod download
-        working-directory: ./service
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -57,10 +56,10 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push recorder
+      - name: Build and push
         uses: docker/build-push-action@v2
         with:
-          context: ./recorder
+          context: .
           push: true
           platforms: linux/amd64
           tags: ${{ steps.docker-md.outputs.tags }}
