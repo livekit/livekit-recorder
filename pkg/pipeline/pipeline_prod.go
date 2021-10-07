@@ -11,18 +11,19 @@ import (
 	"github.com/tinyzimmer/go-gst/gst"
 )
 
-func init() {
-	gst.Init(nil)
-}
+var initialized = false
 
 type Pipeline struct {
 	pipeline *gst.Pipeline
-	audio    *AudioSource
-	video    *VideoSource
 	output   *Output
 }
 
 func NewRtmpPipeline(rtmp []string, options *livekit.RecordingOptions) (*Pipeline, error) {
+	if !initialized {
+		gst.Init(nil)
+		initialized = true
+	}
+
 	output, err := getRtmpOutput(rtmp)
 	if err != nil {
 		return nil, err
@@ -35,6 +36,11 @@ func NewRtmpPipeline(rtmp []string, options *livekit.RecordingOptions) (*Pipelin
 }
 
 func NewFilePipeline(filename string, options *livekit.RecordingOptions) (*Pipeline, error) {
+	if !initialized {
+		gst.Init(nil)
+		initialized = true
+	}
+
 	output, err := getFileOutput(filename)
 	if err != nil {
 		return nil, err
@@ -94,8 +100,6 @@ func newPipeline(output *Output, options *livekit.RecordingOptions) (*Pipeline, 
 
 	return &Pipeline{
 		pipeline: pipeline,
-		audio:    audioSource,
-		video:    videoSource,
 		output:   output,
 	}, nil
 }

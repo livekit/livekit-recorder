@@ -6,7 +6,6 @@ on:
       - '*'
     paths-ignore:
       - web
-      - recorder
   pull_request:
     types:
       - opened
