@@ -17,7 +17,7 @@ import (
 
 	"github.com/magefile/mage/mg"
 
-	"github.com/livekit/livekit-recorder/service/version"
+	"github.com/livekit/livekit-recorder/version"
 )
 
 const goChecksumFile = ".checksumgo"

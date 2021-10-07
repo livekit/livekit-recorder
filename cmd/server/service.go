@@ -26,8 +26,7 @@ func runService(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-
-	svc := service.InitializeService(conf, rc)
+	svc := service.NewService(conf, rc)
 
 	if conf.HealthPort != 0 {
 		go http.ListenAndServe(fmt.Sprintf(":%d", conf.HealthPort), &handler{svc: svc})
@@ -50,7 +49,7 @@ func runService(c *cli.Context) error {
 		}
 	}()
 
-	return svc.Start()
+	return svc.Run()
 }
 
 type handler struct {

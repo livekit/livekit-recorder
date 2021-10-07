@@ -1,30 +1,48 @@
-package recorder
+// +build !test
+
+package display
 
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 
 	"github.com/chromedp/chromedp"
 	"github.com/livekit/protocol/logger"
+
+	"github.com/livekit/livekit-recorder/pkg/config"
 )
 
-const Display = ":99"
+type Display struct {
+	xvfb         *exec.Cmd
+	chromeCancel func()
+}
 
-func (r *Recorder) LaunchXvfb(width, height, depth int) error {
-	logger.Debugw("launching xvfb")
+func New() *Display { return &Display{} }
 
-	dims := fmt.Sprintf("%dx%dx%d", width, height, depth)
-	cmd := exec.Command("Xvfb", Display, "-screen", "0", dims, "-ac", "-nolisten", "tcp")
-	if err := cmd.Start(); err != nil {
+func (d *Display) Launch(url string, width, height, depth int) error {
+	if err := d.launchXvfb(width, height, depth); err != nil {
 		return err
 	}
-
-	r.xvfb = cmd
+	if err := d.launchChrome(url, width, height); err != nil {
+		return err
+	}
 	return nil
 }
 
-func (r *Recorder) LaunchChrome(url string, width, height int) error {
+func (d *Display) launchXvfb(width, height, depth int) error {
+	dims := fmt.Sprintf("%dx%dx%d", width, height, depth)
+	logger.Debugw("launching xvfb", "dims", dims)
+	xvfb := exec.Command("Xvfb", config.Display, "-screen", "0", dims, "-ac", "-nolisten", "tcp")
+	if err := xvfb.Start(); err != nil {
+		return err
+	}
+	d.xvfb = xvfb
+	return nil
+}
+
+func (d *Display) launchChrome(url string, width, height int) error {
 	logger.Debugw("launching chrome")
 
 	opts := []chromedp.ExecAllocatorOption{
@@ -32,7 +50,6 @@ func (r *Recorder) LaunchChrome(url string, width, height int) error {
 		chromedp.NoDefaultBrowserCheck,
 		chromedp.DisableGPU,
 		chromedp.NoSandbox,
-		chromedp.WindowSize(width, height),
 
 		// puppeteer default behavior
 		chromedp.Flag("disable-infobars", true),
@@ -60,17 +77,30 @@ func (r *Recorder) LaunchChrome(url string, width, height int) error {
 		chromedp.Flag("use-mock-keychain", true),
 
 		// custom args
+		chromedp.Flag("kiosk", true),
 		chromedp.Flag("enable-automation", false),
 		chromedp.Flag("autoplay-policy", "no-user-gesture-required"),
 		chromedp.Flag("window-position", "0,0"),
-		chromedp.Flag("display", Display),
+		chromedp.Flag("window-size", fmt.Sprintf("%d,%d", width, height)),
+		chromedp.Flag("display", config.Display),
 	}
 
-	ctx, _ := chromedp.NewExecAllocator(context.Background(), opts...)
-	r.chromeCtx, r.chromeCancel = chromedp.NewContext(ctx)
+	allocCtx, _ := chromedp.NewExecAllocator(context.Background(), opts...)
+	ctx, cancel := chromedp.NewContext(allocCtx)
+	d.chromeCancel = cancel
+	return chromedp.Run(ctx, chromedp.Navigate(url))
+}
 
-	return chromedp.Run(r.chromeCtx,
-		chromedp.Navigate(url),
-		// TODO: wait?
-	)
+func (d *Display) Close() {
+	if d.chromeCancel != nil {
+		d.chromeCancel()
+		d.chromeCancel = nil
+	}
+	if d.xvfb != nil {
+		err := d.xvfb.Process.Signal(os.Interrupt)
+		if err != nil {
+			logger.Errorw("failed to kill xvfb", err)
+		}
+		d.xvfb = nil
+	}
 }

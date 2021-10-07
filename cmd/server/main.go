@@ -1,15 +1,18 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 
 	"github.com/go-logr/zapr"
 	"github.com/livekit/protocol/logger"
+	livekit "github.com/livekit/protocol/proto"
 	"github.com/urfave/cli/v2"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/livekit/livekit-recorder/pkg/config"
 	"github.com/livekit/livekit-recorder/version"
@@ -28,15 +31,32 @@ func main() {
 			&cli.StringFlag{
 				Name:    "config-body",
 				Usage:   "Default LiveKit recording config in JSON, typically passed in as an env var in a container",
-				EnvVars: []string{"LIVEKIT_RECORDER_SVC_CONFIG"},
-			},
-			&cli.StringFlag{
-				Name:    "redis-host",
-				Usage:   "host (incl. port) to redis server",
-				EnvVars: []string{"REDIS_HOST"},
+				EnvVars: []string{"LIVEKIT_RECORDER_CONFIG"},
 			},
 		},
-		Action:  runRecorder,
+		Commands: []*cli.Command{
+			{
+				Name:   "start-recording",
+				Usage:  "Starts a controller server",
+				Action: runRecorder,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "request",
+						Usage: "path to json StartRecordingRequest file",
+					},
+					&cli.StringFlag{
+						Name:    "request-body",
+						Usage:   "StartRecordingRequest json",
+						EnvVars: []string{"RECORDING_REQUEST"},
+					},
+				},
+			},
+			{
+				Name:   "start-service",
+				Usage:  "Starts an origin server",
+				Action: runService,
+			},
+		},
 		Version: version.Version,
 	}
 
@@ -46,12 +66,43 @@ func main() {
 }
 
 func getConfig(c *cli.Context) (*config.Config, error) {
-	confString, err := getConfigString(c)
-	if err != nil {
-		return nil, err
+	configFile := c.String("config")
+	configBody := c.String("config-body")
+	if configBody == "" {
+		if configFile != "" {
+			content, err := ioutil.ReadFile(configFile)
+			if err != nil {
+				return nil, err
+			}
+			configBody = string(content)
+		} else {
+			return nil, errors.New("missing config")
+		}
 	}
 
-	return config.NewConfig(confString, c)
+	return config.NewConfig(configBody)
+}
+
+func getRequest(c *cli.Context) (*livekit.StartRecordingRequest, error) {
+	reqFile := c.String("request")
+	reqBody := c.String("request-body")
+
+	var content []byte
+	var err error
+	if reqBody != "" {
+		content = []byte(reqBody)
+	} else if reqFile != "" {
+		content, err = ioutil.ReadFile(reqFile)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, errors.New("missing request")
+	}
+
+	req := &livekit.StartRecordingRequest{}
+	err = protojson.Unmarshal(content, req)
+	return req, err
 }
 
 func initLogger(level string) {
@@ -65,19 +116,4 @@ func initLogger(level string) {
 
 	l, _ := conf.Build()
 	logger.SetLogger(zapr.NewLogger(l), "livekit-recorder")
-}
-
-func getConfigString(c *cli.Context) (string, error) {
-	configFile := c.String("config")
-	configBody := c.String("config-body")
-	if configBody == "" {
-		if configFile != "" {
-			content, err := ioutil.ReadFile(configFile)
-			if err != nil {
-				return "", err
-			}
-			configBody = string(content)
-		}
-	}
-	return configBody, nil
 }

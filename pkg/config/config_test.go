@@ -1,73 +1,93 @@
-package config
+package config_test
 
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	livekit "github.com/livekit/protocol/proto"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
-func TestMerge(t *testing.T) {
-	defaults := &Config{
-		Redis: RedisConfig{},
-		WsUrl: "wss://testing.livekit.io",
-		S3: S3Config{
-			AccessKey: "s3key",
-			Secret:    "s3secret",
-		},
-		Options: &livekit.RecordingOptions{
-			InputWidth:     1920,
-			InputHeight:    1080,
-			Depth:          24,
-			Framerate:      30,
-			AudioBitrate:   128,
-			AudioFrequency: 44100,
-			VideoBitrate:   4500,
-		},
+var testRequests = []string{`
+{
+	"template": {
+		"layout": "grid-light",
+		"token": "recording-token"
+	},
+	"s3_url": "bucket/path/filename.mp4"
+}
+`, `
+{
+	"template": {
+		"layout": "speaker-dark",
+		"room_name": "test-room"
+	},
+	"file": "/out/filename.mp4",
+	"options": {
+		"preset": "FULL_HD_30"
 	}
-
-	req := &livekit.RecordingReservation{
-		Id: "id",
-		Request: &livekit.StartRecordingRequest{
-			Input: &livekit.RecordingInput{
-				Template: &livekit.RecordingTemplate{
-					Layout: "grid-dark",
-					Token:  "token",
-				},
-			},
-			Output: &livekit.RecordingOutput{
-				S3Path: "bucket/recording.mp4",
-			},
-			Options: &livekit.RecordingOptions{
-				Framerate:    60,
-				VideoBitrate: 6000,
-			},
-		},
+}
+`, `
+{
+	"url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+	"rtmp": {
+        "urls": ["rtmp://stream-url.com", "rtmp://live.twitch.tv/app/stream-key"]
+    },
+	"options": {
+        "width": 1920,
+        "height": 1080
 	}
+}
+`}
 
-	merged, err := Merge(defaults, req)
-	require.NoError(t, err)
-	expected := "{\"input\":{\"template\":{\"layout\":\"grid-dark\",\"ws_url\":\"wss://testing.livekit.io\",\"token\":\"token\"}},\"output\":{\"s3\":{\"bucket\":\"bucket\",\"key\":\"recording.mp4\",\"access_key\":\"s3key\",\"secret\":\"s3secret\"}},\"options\":{\"audio_bitrate\":128,\"audio_frequency\":44100,\"depth\":24,\"framerate\":60,\"input_height\":1080,\"input_width\":1920,\"video_bitrate\":6000}}"
-	require.Equal(t, expected, merged)
+func TestRequests(t *testing.T) {
+	t.Run("template and s3", func(t *testing.T) {
+		req := &livekit.StartRecordingRequest{}
+		require.NoError(t, protojson.Unmarshal([]byte(testRequests[0]), req))
+		require.NotNil(t, req.Input)
+		require.NotNil(t, req.Output)
+		template, ok := req.Input.(*livekit.StartRecordingRequest_Template)
+		require.True(t, ok)
+		require.Equal(t, "grid-light", template.Template.Layout)
+		token, ok := template.Template.Room.(*livekit.RecordingTemplate_Token)
+		require.True(t, ok)
+		require.Equal(t, "recording-token", token.Token)
+		s3, ok := req.Output.(*livekit.StartRecordingRequest_S3Url)
+		require.True(t, ok)
+		require.Equal(t, "bucket/path/filename.mp4", s3.S3Url)
+	})
 
-	req = &livekit.RecordingReservation{
-		Id: "id",
-		Request: &livekit.StartRecordingRequest{
-			Input: &livekit.RecordingInput{
-				Template: &livekit.RecordingTemplate{
-					Layout: "grid-dark",
-					Token:  "token",
-				},
-			},
-			Output: &livekit.RecordingOutput{
-				S3Path: "bucket/recording.mp4",
-			},
-		},
-	}
+	t.Run("file and preset", func(t *testing.T) {
+		req := &livekit.StartRecordingRequest{}
+		require.NoError(t, protojson.Unmarshal([]byte(testRequests[1]), req))
+		require.NotNil(t, req.Input)
+		require.NotNil(t, req.Output)
+		require.NotNil(t, req.Options)
+		template, ok := req.Input.(*livekit.StartRecordingRequest_Template)
+		require.True(t, ok)
+		require.Equal(t, "speaker-dark", template.Template.Layout)
+		roomName, ok := template.Template.Room.(*livekit.RecordingTemplate_RoomName)
+		require.True(t, ok)
+		require.Equal(t, "test-room", roomName.RoomName)
+		file, ok := req.Output.(*livekit.StartRecordingRequest_File)
+		require.True(t, ok)
+		require.Equal(t, "/out/filename.mp4", file.File)
+		require.Equal(t, livekit.RecordingPreset_FULL_HD_30, req.Options.Preset)
+	})
 
-	merged, err = Merge(defaults, req)
-	require.NoError(t, err)
-	expected = "{\"input\":{\"template\":{\"layout\":\"grid-dark\",\"ws_url\":\"wss://testing.livekit.io\",\"token\":\"token\"}},\"output\":{\"s3\":{\"bucket\":\"bucket\",\"key\":\"recording.mp4\",\"access_key\":\"s3key\",\"secret\":\"s3secret\"}},\"options\":{\"input_width\":1920,\"input_height\":1080,\"depth\":24,\"framerate\":30,\"audio_bitrate\":128,\"audio_frequency\":44100,\"video_bitrate\":4500}}"
-	require.Equal(t, expected, merged)
+	t.Run("rtmp and options", func(t *testing.T) {
+		req := &livekit.StartRecordingRequest{}
+		require.NoError(t, protojson.Unmarshal([]byte(testRequests[2]), req))
+		require.NotNil(t, req.Input)
+		require.NotNil(t, req.Output)
+		require.NotNil(t, req.Options)
+		url, ok := req.Input.(*livekit.StartRecordingRequest_Url)
+		require.True(t, ok)
+		require.Equal(t, "https://www.youtube.com/watch?v=dQw4w9WgXcQ", url.Url)
+		rtmp, ok := req.Output.(*livekit.StartRecordingRequest_Rtmp)
+		require.True(t, ok)
+		expected := []string{"rtmp://stream-url.com", "rtmp://live.twitch.tv/app/stream-key"}
+		require.Equal(t, expected, rtmp.Rtmp.Urls)
+		require.Equal(t, int32(1920), req.Options.Width)
+	})
 }
