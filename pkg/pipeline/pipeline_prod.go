@@ -80,13 +80,14 @@ func newPipeline(input *InputBin, output *OutputBin) (*Pipeline, error) {
 		return nil, err
 	}
 
+	// TODO: output bin error handling
+
 	return &Pipeline{
 		pipeline: pipeline,
 		output:   output,
 	}, nil
 }
 
-// TODO: bin error handling
 func (p *Pipeline) Start() error {
 	loop := glib.NewMainLoop(glib.MainContextDefault(), false)
 	p.pipeline.GetPipelineBus().AddWatch(func(msg *gst.Message) bool {

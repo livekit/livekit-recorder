@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/livekit/protocol/logger"
 	livekit "github.com/livekit/protocol/proto"
@@ -37,18 +38,12 @@ func (s *Service) handleRecording() {
 			}
 		case res := <-result:
 			// recording stopped, send results to result channel
+			LogResult(res)
 			b, err := proto.Marshal(res)
 			if err != nil {
 				logger.Errorw("Failed to marshal results", err)
 			} else if err = s.bus.Publish(s.ctx, recording.ResultChannel, b); err != nil {
 				logger.Errorw("Failed to write results", err)
-			}
-
-			if res.Error != "" {
-				logger.Errorw("recording failed", errors.New(res.Error), "recordingId", res.Id)
-			} else {
-				logger.Infow("recording complete", "recordingId", res.Id,
-					"duration", res.Duration, "url", res.DownloadUrl)
 			}
 
 			// clean up
@@ -137,4 +132,16 @@ func (s *Service) handleResponse(recordingId, requestId string, err error) error
 	}
 
 	return s.bus.Publish(s.ctx, recording.ResponseChannel(recordingId), b)
+}
+
+func LogResult(res *livekit.RecordingResult) {
+	if res.Error != "" {
+		logger.Errorw("recording failed", errors.New(res.Error))
+	} else {
+		values := []interface{}{"duration", time.Duration(res.Duration * 1e9)}
+		if res.DownloadUrl != "" {
+			values = append(values, "url", res.DownloadUrl)
+		}
+		logger.Infow("recording complete", values...)
+	}
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/livekit/livekit-recorder/pkg/recorder"
+	"github.com/livekit/livekit-recorder/pkg/service"
 )
 
 func runRecorder(c *cli.Context) error {
@@ -38,13 +39,7 @@ func runRecorder(c *cli.Context) error {
 	}()
 
 	res := rec.Run("standalone")
-	if res.Error != "" {
-		logger.Errorw("recording failed", errors.New(res.Error))
-	} else {
-		logger.Infow("recording complete",
-			"duration", res.Duration, "url", res.DownloadUrl)
-	}
-
+	service.LogResult(res)
 	if res.Error == "" {
 		return nil
 	}
