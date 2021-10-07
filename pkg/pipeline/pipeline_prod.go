@@ -105,6 +105,7 @@ func newPipeline(output *Output, options *livekit.RecordingOptions) (*Pipeline, 
 	}, nil
 }
 
+// TODO: split pipelines, restart second pipeline on failure
 func (p *Pipeline) Start() error {
 	loop := glib.NewMainLoop(glib.MainContextDefault(), false)
 	p.pipeline.GetPipelineBus().AddWatch(func(msg *gst.Message) bool {
