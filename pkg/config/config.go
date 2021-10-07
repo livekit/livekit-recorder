@@ -67,7 +67,6 @@ func NewConfig(confString string) (*Config, error) {
 	if err := os.Setenv("DISPLAY", Display); err != nil {
 		return nil, err
 	}
-	// TODO: fix
 	if err := os.Setenv("GST_DEBUG", fmt.Sprint(conf.GstLogLevel)); err != nil {
 		return nil, err
 	}
