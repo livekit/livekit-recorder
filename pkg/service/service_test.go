@@ -28,18 +28,18 @@ func TestService(t *testing.T) {
 	// wait for service to start
 	time.Sleep(time.Millisecond * 100)
 
-	id1 := utils.NewGuid(utils.RecordingPrefix)
-	id2 := utils.NewGuid(utils.RecordingPrefix)
-
+	var id1, id2, id3 string
 	t.Run("Reservation", func(t *testing.T) {
 		require.Equal(t, Available, svc.Status())
-		require.NoError(t, recording.ReserveRecorder(id1, bus))
+		id1, err = recording.ReserveRecorder(bus)
+		require.NoError(t, err)
 		require.Equal(t, Reserved, svc.Status())
 	})
 
 	t.Run("Double reservation fails", func(t *testing.T) {
 		// second reservation should fail
-		require.Error(t, recording.ReserveRecorder(id2, bus))
+		_, err = recording.ReserveRecorder(bus)
+		require.Error(t, err)
 	})
 
 	t.Run("Start recording", func(t *testing.T) {
@@ -70,22 +70,21 @@ func TestService(t *testing.T) {
 		require.Equal(t, Available, svc.Status())
 	})
 
-	id3 := utils.NewGuid(utils.RecordingPrefix)
-
 	t.Run("RPCs", func(t *testing.T) {
-		require.NoError(t, recording.ReserveRecorder(id3, bus))
-		require.NoError(t, recording.RPC(context.Background(), bus, id3, &livekit.RecordingRequest{
+		id2, err = recording.ReserveRecorder(bus)
+		require.NoError(t, err)
+		require.NoError(t, recording.RPC(context.Background(), bus, id2, &livekit.RecordingRequest{
 			RequestId: utils.RandomSecret(),
 			Request: &livekit.RecordingRequest_Start{
 				Start: startRecordingRequest(false),
 			},
 		}))
 
-		require.NoError(t, recording.RPC(context.Background(), bus, id3, &livekit.RecordingRequest{
+		require.NoError(t, recording.RPC(context.Background(), bus, id2, &livekit.RecordingRequest{
 			RequestId: utils.RandomSecret(),
 			Request: &livekit.RecordingRequest_AddOutput{
 				AddOutput: &livekit.AddOutputRequest{
-					RecordingId: id3,
+					RecordingId: id2,
 					RtmpUrl:     "rtmp://fake-url.com?stream-id=xyz",
 				},
 			},
@@ -93,11 +92,11 @@ func TestService(t *testing.T) {
 	})
 
 	t.Run("Stop recording", func(t *testing.T) {
-		require.NoError(t, recording.RPC(context.Background(), bus, id3, &livekit.RecordingRequest{
+		require.NoError(t, recording.RPC(context.Background(), bus, id2, &livekit.RecordingRequest{
 			RequestId: utils.RandomSecret(),
 			Request: &livekit.RecordingRequest_End{
 				End: &livekit.EndRecordingRequest{
-					RecordingId: id3,
+					RecordingId: id2,
 				},
 			},
 		}))
@@ -106,9 +105,9 @@ func TestService(t *testing.T) {
 	})
 
 	t.Run("Kill service", func(t *testing.T) {
-		id4 := utils.NewGuid(utils.RecordingPrefix)
-		require.NoError(t, recording.ReserveRecorder(id4, bus))
-		require.NoError(t, recording.RPC(context.Background(), bus, id4, &livekit.RecordingRequest{
+		id3, err = recording.ReserveRecorder(bus)
+		require.NoError(t, err)
+		require.NoError(t, recording.RPC(context.Background(), bus, id3, &livekit.RecordingRequest{
 			RequestId: utils.RandomSecret(),
 			Request: &livekit.RecordingRequest_Start{
 				Start: startRecordingRequest(false),
