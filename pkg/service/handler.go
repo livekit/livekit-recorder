@@ -20,7 +20,7 @@ func (s *Service) handleRecording() {
 	defer requests.Close()
 
 	// ready to accept requests
-	err = s.handleResponse(s.recordingId, s.recordingId, nil)
+	err = s.handleResponse(s.recordingId, "", nil)
 	if err != nil {
 		return
 	}
@@ -64,6 +64,7 @@ func (s *Service) handleRecording() {
 }
 
 func (s *Service) handleRequest(req *livekit.RecordingRequest, result chan *livekit.RecordingResult) {
+	logger.Debugw("handling request", "recordingId", s.recordingId, "requestId", req.RequestId)
 	var err error
 	switch req.Request.(type) {
 	case *livekit.RecordingRequest_Start:
@@ -73,23 +74,17 @@ func (s *Service) handleRequest(req *livekit.RecordingRequest, result chan *live
 		}
 
 		// launch recorder
-		s.status.Store(Starting)
 		start := req.Request.(*livekit.RecordingRequest_Start).Start
-		err = s.rec.Init(start)
+		err = s.rec.Validate(start)
 		if err != nil {
-			// failed to start, close recorder
-			result <- &livekit.RecordingResult{
-				Id:    s.recordingId,
-				Error: err.Error(),
-			}
 			break
 		}
 
+		s.status.Store(Recording)
 		go func() {
 			// blocks until recorder is finished
 			result <- s.rec.Run(s.recordingId)
 		}()
-		s.status.Store(Recording)
 	case *livekit.RecordingRequest_AddOutput:
 		if status := s.status.Load(); status != Recording {
 			err = fmt.Errorf("tried calling AddOutput with status %s", status)
@@ -115,6 +110,8 @@ func (s *Service) handleRequest(req *livekit.RecordingRequest, result chan *live
 }
 
 func (s *Service) handleResponse(recordingId, requestId string, err error) error {
+	logger.Debugw("Sending response", "recordingId", recordingId, "requestId", requestId)
+
 	var message string
 	if err != nil {
 		logger.Errorw("Error handling request", err,
@@ -124,7 +121,6 @@ func (s *Service) handleResponse(recordingId, requestId string, err error) error
 
 	b, err := proto.Marshal(&livekit.RecordingResponse{
 		RequestId: requestId,
-		Success:   err == nil,
 		Error:     message,
 	})
 	if err != nil {

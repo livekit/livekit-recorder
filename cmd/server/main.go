@@ -27,7 +27,7 @@ func main() {
 			&cli.BoolFlag{
 				Name:    "service-mode",
 				Usage:   "run recorder service",
-				EnvVars: []string{"SERVICE-MODE"},
+				EnvVars: []string{"SERVICE_MODE"},
 			},
 			&cli.StringFlag{
 				Name:  "config",

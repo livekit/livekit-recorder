@@ -26,7 +26,7 @@ func runRecorder(c *cli.Context) error {
 	initLogger(conf.LogLevel)
 
 	rec := recorder.NewRecorder(conf)
-	if err = rec.Init(req); err != nil {
+	if err = rec.Validate(req); err != nil {
 		return err
 	}
 

@@ -15,9 +15,11 @@ import (
 
 type Recorder struct {
 	conf *config.Config
-	req  *livekit.StartRecordingRequest
 
+	req      *livekit.StartRecordingRequest
+	url      string
 	filename string
+
 	display  *display.Display
 	pipeline *pipeline.Pipeline
 }
@@ -28,7 +30,7 @@ func NewRecorder(conf *config.Config) *Recorder {
 	}
 }
 
-func (r *Recorder) Init(req *livekit.StartRecordingRequest) error {
+func (r *Recorder) Validate(req *livekit.StartRecordingRequest) error {
 	r.conf.ApplyDefaults(req)
 
 	// validate input
@@ -60,19 +62,22 @@ func (r *Recorder) Init(req *livekit.StartRecordingRequest) error {
 	}
 
 	r.req = req
-	r.display = display.New()
-	return r.display.Launch(url, int(req.Options.Width), int(req.Options.Height), int(req.Options.Depth))
+	r.url = url
+	return nil
 }
 
 // Run blocks until completion
 func (r *Recorder) Run(recordingId string) *livekit.RecordingResult {
+	r.display = display.New()
+	options := r.req.Options
+	err := r.display.Launch(r.url, int(options.Width), int(options.Height), int(options.Depth))
+
 	res := &livekit.RecordingResult{Id: recordingId}
 	if r.req == nil {
 		res.Error = "recorder not initialized"
 		return res
 	}
 
-	var err error
 	r.pipeline, err = r.getPipeline(r.req)
 	if err != nil {
 		logger.Errorw("error building pipeline", err)
@@ -111,6 +116,7 @@ func (r *Recorder) getPipeline(req *livekit.StartRecordingRequest) (*pipeline.Pi
 }
 
 func (r *Recorder) AddOutput(url string) error {
+	logger.Debugw("Add Output", "url", url)
 	if r.pipeline == nil {
 		return errors.New("missing pipeline")
 	}
@@ -118,6 +124,7 @@ func (r *Recorder) AddOutput(url string) error {
 }
 
 func (r *Recorder) RemoveOutput(url string) error {
+	logger.Debugw("Remove Output", "url", url)
 	if r.pipeline == nil {
 		return errors.New("missing pipeline")
 	}

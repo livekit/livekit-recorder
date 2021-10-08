@@ -32,7 +32,6 @@ type Status string
 const (
 	Available Status = "available"
 	Reserved  Status = "reserved"
-	Starting  Status = "starting"
 	Recording Status = "recording"
 	Stopping  Status = "stopping"
 )
@@ -49,6 +48,8 @@ func NewService(conf *config.Config, bus utils.MessageBus) *Service {
 }
 
 func (s *Service) Run() error {
+	// TODO: catch panics
+
 	logger.Debugw("Starting service")
 
 	reservations, err := s.bus.SubscribeQueue(context.Background(), recording.ReservationChannel)

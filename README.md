@@ -135,7 +135,8 @@ Finally, to build and run:
 docker build -t livekit-recorder .
 docker run --network host \
     -e SERVICE_MODE=1 \
-    -e REDIS_HOST="192.168.65.2:6379" livekit-recorder
+    -e LIVEKIT_RECORDER_CONFIG="$(cat config.yaml)" \
+    livekit-recorder
 ```
 
 You can then use our [cli](https://github.com/livekit/livekit-cli) to submit recording requests to your server.
