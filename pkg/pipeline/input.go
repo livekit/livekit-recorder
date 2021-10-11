@@ -55,10 +55,6 @@ func newInputBin(isStream bool, options *livekit.RecordingOptions) (*InputBin, e
 	if err != nil {
 		return nil, err
 	}
-	err = audioQueue.SetProperty("flush-on-eos", true)
-	if err != nil {
-		return nil, err
-	}
 
 	// create video elements
 	xImageSrc, err := gst.NewElement("ximagesrc")
@@ -98,10 +94,6 @@ func newInputBin(isStream bool, options *livekit.RecordingOptions) (*InputBin, e
 	x264Enc.SetArg("tune", "zerolatency")
 
 	videoQueue, err := gst.NewElement("queue")
-	if err != nil {
-		return nil, err
-	}
-	err = videoQueue.SetProperty("flush-on-eos", true)
 	if err != nil {
 		return nil, err
 	}

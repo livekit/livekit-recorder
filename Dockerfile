@@ -1,5 +1,20 @@
-FROM restreamio/gstreamer:1.18.5.0-dev as builder
+FROM restreamio/gstreamer:1.19.2-dev as builder
 
+WORKDIR /workspace
+
+RUN git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp && \
+    git clone https://github.com/amzn/amazon-s3-gst-plugin.git && \
+    mkdir sdk_build
+WORKDIR /workspace/sdk_build
+RUN cmake /workspace/aws-sdk-cpp -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="sts;s3" -DBUILD_SHARED_LIBS=ON && \
+    make && \
+    make install
+
+WORKDIR /workspace/amazon-s3-gst-plugin
+RUN meson build -D gst_req=1.18.5 -D prefix=/usr -D gupnp=disabled -D msdk=enabled -D with_x11=no -D debug=false \
+    -D optimization=3 -D b_lto=true -D buildtype=release && \
+    ninja -C build install && \
+    DESTDIR=/compiled-binaries ninja -C build install
 WORKDIR /workspace
 
 RUN apt-get update && apt-get install -y golang
@@ -19,9 +34,11 @@ COPY version/ version/
 WORKDIR /workspace
 RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o livekit-recorder ./cmd/server
 
-FROM restreamio/gstreamer:1.18.5.0-dev
+FROM restreamio/gstreamer:1.19.2-prod
 
 COPY --from=builder /workspace/livekit-recorder /livekit-recorder
+COPY --from=builder /usr/local/lib/libaws*.so /usr/local/lib
+COPY --from=builder /compiled-binaries/ /
 
 # install deps
 RUN apt-get update && \

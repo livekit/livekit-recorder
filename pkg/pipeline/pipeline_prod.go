@@ -16,7 +16,7 @@ var initialized = false
 
 type Pipeline struct {
 	pipeline *gst.Pipeline
-	output   *OutputBin
+	output   OutputBin
 }
 
 func NewRtmpPipeline(urls []string, options *livekit.RecordingOptions) (*Pipeline, error) {
@@ -30,6 +30,24 @@ func NewRtmpPipeline(urls []string, options *livekit.RecordingOptions) (*Pipelin
 		return nil, err
 	}
 	output, err := newRtmpOutputBin(urls)
+	if err != nil {
+		return nil, err
+	}
+
+	return newPipeline(input, output)
+}
+
+func NewS3Pipeline(region, url string, options *livekit.RecordingOptions) (*Pipeline, error) {
+	if !initialized {
+		gst.Init(nil)
+		initialized = true
+	}
+
+	input, err := newInputBin(false, options)
+	if err != nil {
+		return nil, err
+	}
+	output, err := NewS3OutputBin(region, url)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +73,7 @@ func NewFilePipeline(filename string, options *livekit.RecordingOptions) (*Pipel
 	return newPipeline(input, output)
 }
 
-func newPipeline(input *InputBin, output *OutputBin) (*Pipeline, error) {
+func newPipeline(input *InputBin, output OutputBin) (*Pipeline, error) {
 	// elements must be added to pipeline before linking
 	pipeline, err := gst.NewPipeline("pipeline")
 	if err != nil {
@@ -63,7 +81,7 @@ func newPipeline(input *InputBin, output *OutputBin) (*Pipeline, error) {
 	}
 
 	// add bins to pipeline
-	if err = pipeline.AddMany(input.bin.Element, output.bin.Element); err != nil {
+	if err = pipeline.AddMany(input.bin.Element, output.Bin()); err != nil {
 		return nil, err
 	}
 
@@ -76,7 +94,7 @@ func newPipeline(input *InputBin, output *OutputBin) (*Pipeline, error) {
 	}
 
 	// link bins
-	if err = input.bin.Link(output.bin.Element); err != nil {
+	if err = input.bin.Link(output.Bin()); err != nil {
 		return nil, err
 	}
 

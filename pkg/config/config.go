@@ -80,6 +80,15 @@ func NewConfig(confString string) (*Config, error) {
 		return nil, err
 	}
 
+	if conf.S3.AccessKey != "" && conf.S3.Secret != "" {
+		if err := os.Setenv("AWS_ACCESS_KEY_ID", conf.S3.AccessKey); err != nil {
+			return nil, err
+		}
+		if err := os.Setenv("AWS_SECRET_ACCESS_KEY", conf.S3.Secret); err != nil {
+			return nil, err
+		}
+	}
+
 	return conf, nil
 }
 

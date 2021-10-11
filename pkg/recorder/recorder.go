@@ -17,8 +17,7 @@ type Recorder struct {
 	conf *config.Config
 
 	req      *livekit.StartRecordingRequest
-	url      string
-	filename string
+	inputUrl string
 
 	display  *display.Display
 	pipeline *pipeline.Pipeline
@@ -49,20 +48,18 @@ func (r *Recorder) Validate(req *livekit.StartRecordingRequest) error {
 			!strings.HasSuffix(s3, ".mp4") {
 			return errors.New("s3 output must be s3://bucket/{path/}filename.mp4")
 		}
-		r.filename = s3[idx+1:]
 	case *livekit.StartRecordingRequest_Rtmp:
 	case *livekit.StartRecordingRequest_File:
 		filename := req.Output.(*livekit.StartRecordingRequest_File).File
 		if !strings.HasSuffix(filename, ".mp4") {
 			return errors.New("file output must be {path/}filename.mp4")
 		}
-		r.filename = filename
 	default:
 		return errors.New("missing output")
 	}
 
 	r.req = req
-	r.url = url
+	r.inputUrl = url
 	return nil
 }
 
@@ -70,7 +67,7 @@ func (r *Recorder) Validate(req *livekit.StartRecordingRequest) error {
 func (r *Recorder) Run(recordingId string) *livekit.RecordingResult {
 	r.display = display.New()
 	options := r.req.Options
-	err := r.display.Launch(r.url, int(options.Width), int(options.Height), int(options.Depth))
+	err := r.display.Launch(r.inputUrl, int(options.Width), int(options.Height), int(options.Depth))
 
 	res := &livekit.RecordingResult{Id: recordingId}
 	if r.req == nil {
@@ -93,15 +90,6 @@ func (r *Recorder) Run(recordingId string) *livekit.RecordingResult {
 		return res
 	}
 	res.Duration = time.Since(start).Milliseconds() / 1000
-
-	if s3, ok := r.req.Output.(*livekit.StartRecordingRequest_S3Url); ok {
-		if err = r.upload(s3.S3Url); err != nil {
-			res.Error = err.Error()
-			return res
-		}
-		res.DownloadUrl = s3.S3Url
-	}
-
 	return res
 }
 
@@ -109,10 +97,13 @@ func (r *Recorder) getPipeline(req *livekit.StartRecordingRequest) (*pipeline.Pi
 	switch req.Output.(type) {
 	case *livekit.StartRecordingRequest_Rtmp:
 		return pipeline.NewRtmpPipeline(req.Output.(*livekit.StartRecordingRequest_Rtmp).Rtmp.Urls, req.Options)
-	case *livekit.StartRecordingRequest_S3Url, *livekit.StartRecordingRequest_File:
-		return pipeline.NewFilePipeline(r.filename, req.Options)
+	case *livekit.StartRecordingRequest_S3Url:
+		s3Url := req.Output.(*livekit.StartRecordingRequest_S3Url).S3Url
+		return pipeline.NewS3Pipeline(r.conf.S3.Region, s3Url, req.Options)
+	case *livekit.StartRecordingRequest_File:
+		return pipeline.NewFilePipeline(req.Output.(*livekit.StartRecordingRequest_File).File, req.Options)
 	}
-	return nil, errors.New("output missing")
+	return nil, errors.New("unsupported output")
 }
 
 func (r *Recorder) AddOutput(url string) error {

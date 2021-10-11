@@ -27,6 +27,13 @@ func NewFilePipeline(filename string, options *livekit.RecordingOptions) (*Pipel
 	}, nil
 }
 
+func NewS3Pipeline(s3Url string, options *livekit.RecordingOptions) (*Pipeline, error) {
+	return &Pipeline{
+		isStream: false,
+		kill:     make(chan struct{}, 1),
+	}, nil
+}
+
 func (p *Pipeline) Start() error {
 	select {
 	case <-time.After(time.Second * 3):
@@ -37,14 +44,14 @@ func (p *Pipeline) Start() error {
 
 func (p *Pipeline) AddOutput(url string) error {
 	if !p.isStream {
-		return ErrCannotAddToFile
+		return ErrNotSupported
 	}
 	return nil
 }
 
 func (p *Pipeline) RemoveOutput(url string) error {
 	if !p.isStream {
-		return ErrCannotRemoveFromFile
+		return ErrNotSupported
 	}
 	return nil
 }
