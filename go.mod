@@ -10,6 +10,7 @@ require (
 	github.com/go-redis/redis/v8 v8.11.3
 	github.com/livekit/protocol v0.9.7-0.20211008020017-77ddad9c418c
 	github.com/magefile/mage v1.11.0
+	github.com/nxadm/tail v1.4.8
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
 	github.com/tinyzimmer/go-glib v0.0.24

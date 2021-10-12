@@ -23,7 +23,7 @@ type OutputBin struct {
 	rtmpSinks []*gst.Element
 }
 
-func newFileOutputBin(filename string) (*OutputBin, error) {
+func newFileOutputBin(filename string, oSync bool) (*OutputBin, error) {
 	// create elements
 	sink, err := gst.NewElement("filesink")
 	if err != nil {
@@ -34,6 +34,16 @@ func newFileOutputBin(filename string) (*OutputBin, error) {
 	}
 	if err = sink.SetProperty("sync", false); err != nil {
 		return nil, err
+	}
+
+	if oSync {
+		if err = sink.SetProperty("o-sync", true); err != nil {
+			return nil, err
+		}
+		sink.SetArg("buffer-mode", "full")
+		if err = sink.SetProperty("buffer-size", uint(1048576)); err != nil {
+			return nil, err
+		}
 	}
 
 	// create bin

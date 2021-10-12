@@ -47,7 +47,25 @@ func NewFilePipeline(filename string, options *livekit.RecordingOptions) (*Pipel
 	if err != nil {
 		return nil, err
 	}
-	output, err := newFileOutputBin(filename)
+	output, err := newFileOutputBin(filename, false)
+	if err != nil {
+		return nil, err
+	}
+
+	return newPipeline(input, output)
+}
+
+func NewS3Pipeline(filename string, options *livekit.RecordingOptions) (*Pipeline, error) {
+	if !initialized {
+		gst.Init(nil)
+		initialized = true
+	}
+
+	input, err := newInputBin(false, options)
+	if err != nil {
+		return nil, err
+	}
+	output, err := newFileOutputBin(filename, true)
 	if err != nil {
 		return nil, err
 	}
