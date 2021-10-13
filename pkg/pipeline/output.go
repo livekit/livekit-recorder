@@ -23,7 +23,6 @@ type OutputBin struct {
 }
 
 type RtmpOut struct {
-	id    string
 	pad   string
 	queue *gst.Element
 	sink  *gst.Element
@@ -122,7 +121,6 @@ func createRtmpOut(url string) (*RtmpOut, error) {
 	}
 
 	return &RtmpOut{
-		id:    id,
 		queue: queue,
 		sink:  sink,
 	}, nil
