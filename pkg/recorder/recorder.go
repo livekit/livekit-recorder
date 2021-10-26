@@ -57,7 +57,7 @@ func (r *Recorder) Run(recordingId string) *livekit.RecordingResult {
 	}
 	res.Duration = time.Since(start).Milliseconds() / 1000
 
-	if r.conf.FileOutput.S3 != nil {
+	if r.filename != "" && r.conf.FileOutput.S3 != nil {
 		url := fmt.Sprintf("s3://%s/%s", r.conf.FileOutput.S3.Bucket, r.filename)
 		if err = r.upload(url); err != nil {
 			res.Error = err.Error()
