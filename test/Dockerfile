@@ -17,6 +17,10 @@ COPY pkg/ pkg/
 COPY test/ test/
 COPY version/ version/
 
+# install rtmp server
+RUN wget https://github.com/aler9/rtsp-simple-server/releases/download/v0.17.6/rtsp-simple-server_v0.17.6_linux_amd64.tar.gz && \
+    tar -zxvf rtsp-simple-server_v0.17.6_linux_amd64.tar.gz
+
 # install deps
 RUN apt-get update && \
     apt-get install -y curl unzip wget gnupg xvfb pulseaudio gstreamer1.0-pulseaudio ffmpeg
