@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -47,10 +48,21 @@ func (r *Recorder) Validate(req *livekit.StartRecordingRequest) error {
 			return ErrInvalidFilePath
 		}
 
-		if idx := strings.LastIndex(filepath, "/"); idx != -1 {
-			r.filename = filepath[idx+1:]
-		} else {
+		if r.conf.FileOutput.Local {
+			// ensure directory exists
+			if idx := strings.LastIndex(filepath, "/"); idx != -1 {
+				if err = os.MkdirAll(filepath[:idx], os.ModeDir); err != nil {
+					return err
+				}
+			}
 			r.filename = filepath
+		} else {
+			if idx := strings.LastIndex(filepath, "/"); idx != -1 {
+				// ignore directory for local write
+				r.filename = filepath[idx+1:]
+			} else {
+				r.filename = filepath
+			}
 		}
 		r.filepath = filepath
 	default:
