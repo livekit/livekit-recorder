@@ -57,7 +57,7 @@ func runFileTest(t *testing.T, conf *config.Config) {
 	})
 
 	res := rec.Run("room_test")
-	verifyFile(t, req, res, "file-test.mp4")
+	verifyFile(t, req, res, filepath)
 }
 
 func runRtmpTest(t *testing.T, conf *config.Config) {
