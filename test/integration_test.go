@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os/exec"
 	"testing"
+	"time"
 
 	livekit "github.com/livekit/protocol/proto"
 	"github.com/stretchr/testify/require"
@@ -23,7 +24,7 @@ func TestRecorder(t *testing.T) {
 	conf.WsUrl = "ws://localhost:7880"
 
 	if !t.Run("template-test", func(t *testing.T) {
-		runTemplateTest(t, conf)
+		runFileTest(t, conf)
 	}) {
 		t.FailNow()
 	}
@@ -35,42 +36,36 @@ func TestRecorder(t *testing.T) {
 	// }
 }
 
-func runTemplateTest(t *testing.T, conf *config.Config) {
-	filename := "/Users/dc/Downloads/s3-test.mp4"
+func runFileTest(t *testing.T, conf *config.Config) {
+	filename := "file-test.mp4"
 	req := &livekit.StartRecordingRequest{
-		Input: &livekit.StartRecordingRequest_Template{
-			Template: &livekit.RecordingTemplate{
-				Layout: "speaker-dark",
-				Room: &livekit.RecordingTemplate_RoomName{
-					RoomName: "recorder-test",
-				},
-			},
+		Input: &livekit.StartRecordingRequest_Url{
+			Url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
 		},
 		Output: &livekit.StartRecordingRequest_Filepath{
 			Filepath: filename,
 		},
 	}
 
-	// TODO: start publishing video to room
-
 	rec := recorder.NewRecorder(conf)
 	require.NoError(t, rec.Validate(req))
 
-	// // record for 15s
-	// time.AfterFunc(time.Second*15, func() {
-	// 	rec.Stop()
-	// })
-	// res := rec.Run("room_test")
-	//
-	// // check error
-	// require.Empty(t, res.Error)
+	// record for 15s
+	time.AfterFunc(time.Second*15, func() {
+		rec.Stop()
+	})
+	res := rec.Run("room_test")
+
+	// check error
+	require.Empty(t, res.Error)
 
 	info, err := ffprobe(filename)
 	require.NoError(t, err, "ffprobe failed")
 
 	require.NotEqual(t, 0, info.Format.Size)
-	// TODO: compare duration to res.Duration
-	require.NotEqual(t, 0, info.Format.Duration)
+	// TODO: compare durations
+	require.NotEqual(t, "0", info.Format.Duration)
+	require.NotEqual(t, int64(0), res.Duration)
 	require.Equal(t, "x264", info.Format.Tags.Encoder)
 	require.Equal(t, 100, info.Format.ProbeScore)
 	require.Len(t, info.Streams, 2)
