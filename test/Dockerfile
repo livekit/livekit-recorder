@@ -14,14 +14,8 @@ RUN go mod download
 # Copy the go source
 COPY cmd/ cmd/
 COPY pkg/ pkg/
+COPY test/ test/
 COPY version/ version/
-
-WORKDIR /workspace
-RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 GO111MODULE=on go build -a -o livekit-recorder ./cmd/server
-
-FROM restreamio/gstreamer:1.18.5.0-prod
-
-COPY --from=builder /workspace/livekit-recorder /livekit-recorder
 
 # install deps
 RUN apt-get update && \
@@ -49,5 +43,4 @@ RUN adduser root pulse-access
 RUN mkdir -pv ~/.cache/xdgr
 
 # run
-COPY entrypoint.sh .
-ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["./test/entrypoint.sh"]

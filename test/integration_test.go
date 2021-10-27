@@ -1,6 +1,6 @@
-// +build test
+// +build integration
 
-package main
+package test
 
 import (
 	"encoding/json"
@@ -66,7 +66,7 @@ func runTemplateTest(t *testing.T, conf *config.Config) {
 	// require.Empty(t, res.Error)
 
 	info, err := ffprobe(filename)
-	require.NoError(t, err)
+	require.NoError(t, err, "ffprobe failed")
 
 	require.NotEqual(t, 0, info.Format.Size)
 	// TODO: compare duration to res.Duration
