@@ -46,7 +46,7 @@ func Integration() error {
 		return err
 	}
 
-	cmd = exec.Command("docker", "run", "recorder-integration-test")
+	cmd = exec.Command("docker", "run", "--rm", "recorder-integration-test")
 	connectStd(cmd)
 	if err := cmd.Run(); err != nil {
 		return err

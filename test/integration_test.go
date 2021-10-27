@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"strconv"
 	"testing"
 	"time"
 
@@ -25,6 +26,7 @@ func TestRecorder(t *testing.T) {
 
 	if !t.Run("template-test", func(t *testing.T) {
 		runFileTest(t, conf)
+		require.True(t, false)
 	}) {
 		t.FailNow()
 	}
@@ -50,8 +52,8 @@ func runFileTest(t *testing.T, conf *config.Config) {
 	rec := recorder.NewRecorder(conf)
 	require.NoError(t, rec.Validate(req))
 
-	// record for 15s
-	time.AfterFunc(time.Second*15, func() {
+	// record for 15s. Takes about 5s to start
+	time.AfterFunc(time.Second*20, func() {
 		rec.Stop()
 	})
 	res := rec.Run("room_test")
@@ -62,14 +64,16 @@ func runFileTest(t *testing.T, conf *config.Config) {
 	info, err := ffprobe(filename)
 	require.NoError(t, err, "ffprobe failed")
 
+	// check format info
 	require.NotEqual(t, 0, info.Format.Size)
-	// TODO: compare durations
-	require.NotEqual(t, "0", info.Format.Duration)
 	require.NotEqual(t, int64(0), res.Duration)
+	compareInfo(t, int32(res.Duration), info.Format.Duration, 0.95)
+	fmt.Println("durations: ", info.Format.Duration, res.Duration)
 	require.Equal(t, "x264", info.Format.Tags.Encoder)
 	require.Equal(t, 100, info.Format.ProbeScore)
 	require.Len(t, info.Streams, 2)
 
+	// check stream info
 	var hasAudio, hasVideo bool
 	for _, stream := range info.Streams {
 		switch stream.CodecType {
@@ -79,16 +83,14 @@ func runFileTest(t *testing.T, conf *config.Config) {
 			require.Equal(t, 2, stream.Channels)
 			require.Equal(t, "stereo", stream.ChannelLayout)
 			require.Equal(t, fmt.Sprint(req.Options.AudioFrequency), stream.SampleRate)
-			// TODO: compare bitrate to req.Options.AudioBitrate "bit_rate": "135495",
-			require.NotEqual(t, 0, stream.BitRate)
+			compareInfo(t, req.Options.AudioBitrate*1000, stream.BitRate, 0.9)
 		case "video":
 			hasVideo = true
 			require.Equal(t, "h264", stream.CodecName)
 			require.Equal(t, req.Options.Width, stream.Width)
 			require.Equal(t, req.Options.Height, stream.Height)
 			require.Equal(t, fmt.Sprintf("%d/1", req.Options.Framerate), stream.RFrameRate)
-			// TODO: compare bitrate to req.Options.VideoBitrate  "bit_rate": "3783664",
-			require.NotEqual(t, 0, stream.BitRate)
+			compareInfo(t, req.Options.VideoBitrate*1000, stream.BitRate, 0.75)
 		default:
 			t.Fatalf("unrecognized stream type %s", stream.CodecType)
 		}
@@ -96,14 +98,27 @@ func runFileTest(t *testing.T, conf *config.Config) {
 	require.True(t, hasAudio && hasVideo)
 }
 
+func compareInfo(t *testing.T, expected int32, actual string, threshold float64) {
+	parsed, err := strconv.ParseFloat(actual, 64)
+	require.NoError(t, err)
+
+	opt := float64(expected)
+	if parsed < opt {
+		require.Greater(t, threshold, (parsed-opt)/parsed)
+	} else {
+		require.Greater(t, threshold, (opt-parsed)/opt)
+	}
+}
+
 func runRtmpTest(t *testing.T, conf *config.Config) {
+	rtmpUrl := "TODO"
 	req := &livekit.StartRecordingRequest{
 		Input: &livekit.StartRecordingRequest_Url{
 			Url: "TODO",
 		},
 		Output: &livekit.StartRecordingRequest_Rtmp{
 			Rtmp: &livekit.RtmpOutput{
-				Urls: []string{"TODO", "TODO"},
+				Urls: []string{rtmpUrl},
 			},
 		},
 	}
@@ -115,11 +130,17 @@ func runRtmpTest(t *testing.T, conf *config.Config) {
 		resChan <- rec.Run("rtmp_test")
 	}()
 
-	// TODO: verify stream with ffprobe
+	// check stream
+	verifyRTMP(t, rtmpUrl)
 
-	// TODO: add rtmp
+	// add another, check both
+	rtmpUrl2 := "TODO"
+	require.NoError(t, rec.AddOutput(rtmpUrl2))
+	verifyRTMP(t, rtmpUrl, rtmpUrl2)
 
-	// TODO: remove rtmp
+	// remove first, check second
+	require.NoError(t, rec.RemoveOutput(rtmpUrl))
+	verifyRTMP(t, rtmpUrl2)
 
 	// stop
 	rec.Stop()
@@ -127,8 +148,11 @@ func runRtmpTest(t *testing.T, conf *config.Config) {
 
 	// check error
 	require.Empty(t, res.Error)
+	require.NotEqual(t, int64(0), res.Duration)
+}
 
-	// TODO: check duration
+func verifyRTMP(t *testing.T, urls ...string) {
+
 }
 
 type FFProbeInfo struct {
