@@ -42,11 +42,17 @@ func (r *Recorder) Validate(req *livekit.StartRecordingRequest) error {
 			}
 		}
 	case *livekit.StartRecordingRequest_Filepath:
-		filename := req.Output.(*livekit.StartRecordingRequest_Filepath).Filepath
-		if !strings.HasSuffix(filename, ".mp4") {
+		filepath := req.Output.(*livekit.StartRecordingRequest_Filepath).Filepath
+		if !strings.HasSuffix(filepath, ".mp4") {
 			return ErrInvalidFilePath
 		}
-		r.filename = filename
+
+		if idx := strings.LastIndex(filepath, "/"); idx != -1 {
+			r.filename = filepath[idx+1:]
+		} else {
+			r.filename = filepath
+		}
+		r.filepath = filepath
 	default:
 		return ErrNoOutput
 	}
