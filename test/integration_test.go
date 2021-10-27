@@ -26,7 +26,6 @@ func TestRecorder(t *testing.T) {
 
 	if !t.Run("template-test", func(t *testing.T) {
 		runFileTest(t, conf)
-		require.True(t, false)
 	}) {
 		t.FailNow()
 	}
@@ -90,7 +89,7 @@ func runFileTest(t *testing.T, conf *config.Config) {
 			require.Equal(t, req.Options.Width, stream.Width)
 			require.Equal(t, req.Options.Height, stream.Height)
 			require.Equal(t, fmt.Sprintf("%d/1", req.Options.Framerate), stream.RFrameRate)
-			compareInfo(t, req.Options.VideoBitrate*1000, stream.BitRate, 0.75)
+			compareInfo(t, req.Options.VideoBitrate*1000, stream.BitRate, 0.9)
 		default:
 			t.Fatalf("unrecognized stream type %s", stream.CodecType)
 		}
