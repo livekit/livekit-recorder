@@ -4,6 +4,7 @@ package display
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -108,7 +109,12 @@ func (d *Display) launchChrome(url string, width, height int) error {
 		case *runtime.EventConsoleAPICalled:
 			args := make([]string, 0, len(ev.Args))
 			for _, arg := range ev.Args {
-				msg := fmt.Sprint(arg.Value)
+				var val interface{}
+				err := json.Unmarshal(arg.Value, &val)
+				if err != nil {
+					continue
+				}
+				msg := fmt.Sprint(val)
 				args = append(args, msg)
 				switch msg {
 				case startRecording:
@@ -118,7 +124,7 @@ func (d *Display) launchChrome(url string, width, height int) error {
 				default:
 				}
 			}
-			logger.Debugw(fmt.Sprintf("console %s", ev.Type.String()), "msg", strings.Join(args, " "))
+			logger.Debugw(fmt.Sprintf("chrome console %s", ev.Type.String()), "msg", strings.Join(args, " "))
 		}
 	})
 
