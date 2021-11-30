@@ -26,7 +26,7 @@ type Config struct {
 	Redis           RedisConfig `yaml:"redis"`
 	FileOutput      FileOutput  `yaml:"file_output"`
 	Defaults        Defaults    `yaml:"defaults"`
-	Display         string
+	Display         string      `yaml:"-"`
 }
 
 type RedisConfig struct {
