@@ -2,7 +2,6 @@ package recorder
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -27,7 +26,7 @@ type Recorder struct {
 	filepath string
 
 	// result info
-	sync.RWMutex
+	sync.Mutex
 	ri         *livekit.RecordingInfo
 	startTimes map[string]time.Time
 }
@@ -67,7 +66,7 @@ func (r *Recorder) Run() *livekit.RecordingInfo {
 	}
 
 	// wait for START_RECORDING console log
-	if strings.HasPrefix(r.url, r.conf.TemplateAddress) {
+	if r.req.Input.(*livekit.StartRecordingRequest_Template) != nil {
 		r.display.WaitForRoom()
 	}
 	// stop on END_RECORDING console log
@@ -78,9 +77,11 @@ func (r *Recorder) Run() *livekit.RecordingInfo {
 
 	start := time.Now()
 	if rtmp := r.req.Output.(*livekit.StartRecordingRequest_Rtmp); rtmp != nil {
+		r.Lock()
 		for _, url := range rtmp.Rtmp.Urls {
 			r.startTimes[url] = start
 		}
+		r.Unlock()
 	}
 
 	err = r.pipeline.Start()
