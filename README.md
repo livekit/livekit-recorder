@@ -21,6 +21,7 @@ api_secret: livekit server api secret
 ws_url: livekit server ws url
 health_port: http port to serve status (optional)
 log_level: valid levels are debug, info, warn, error, fatal, or panic. Defaults to debug
+template_address: template url base, can be used to host your own templates. Defaults to https://recorder.livekit.io
 redis: (service mode only)
     address: redis address, including port
     username: redis username (optional)

@@ -91,7 +91,7 @@ func (r *Recorder) GetInputUrl(req *livekit.StartRecordingRequest) (string, erro
 			return "", err
 		}
 
-		baseUrl := "https://recorder.livekit.io"
+		baseUrl := r.conf.TemplateAddress
 		if template.BaseUrl != "" {
 			baseUrl = template.BaseUrl
 		}
