@@ -120,7 +120,9 @@ func NewConfig(confString string) (*Config, error) {
 
 func TestConfig() (*Config, error) {
 	conf := &Config{
-		LogLevel: "debug",
+		ApiKey:    "fakeKey",
+		ApiSecret: "fakeSecret",
+		LogLevel:  "debug",
 		Redis: RedisConfig{
 			Address: "localhost:6379",
 		},

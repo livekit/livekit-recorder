@@ -65,10 +65,12 @@ func (r *Recorder) Run() *livekit.RecordingInfo {
 		return r.ri
 	}
 
-	// wait for START_RECORDING console log
-	if r.req.Input.(*livekit.StartRecordingRequest_Template) != nil {
+	// wait for START_RECORDING console log if using template
+	switch r.req.Input.(type) {
+	case *livekit.StartRecordingRequest_Template:
 		r.display.WaitForRoom()
 	}
+
 	// stop on END_RECORDING console log
 	go func(d *display.Display) {
 		<-d.EndMessage()
@@ -76,9 +78,10 @@ func (r *Recorder) Run() *livekit.RecordingInfo {
 	}(r.display)
 
 	start := time.Now()
-	if rtmp := r.req.Output.(*livekit.StartRecordingRequest_Rtmp); rtmp != nil {
+	switch output := r.req.Output.(type) {
+	case *livekit.StartRecordingRequest_Rtmp:
 		r.Lock()
-		for _, url := range rtmp.Rtmp.Urls {
+		for _, url := range output.Rtmp.Urls {
 			r.startTimes[url] = start
 		}
 		r.Unlock()
@@ -126,9 +129,9 @@ func (r *Recorder) Run() *livekit.RecordingInfo {
 }
 
 func (r *Recorder) getPipeline(req *livekit.StartRecordingRequest) (*pipeline.Pipeline, error) {
-	switch req.Output.(type) {
+	switch output := req.Output.(type) {
 	case *livekit.StartRecordingRequest_Rtmp:
-		return pipeline.NewRtmpPipeline(req.Output.(*livekit.StartRecordingRequest_Rtmp).Rtmp.Urls, req.Options)
+		return pipeline.NewRtmpPipeline(output.Rtmp.Urls, req.Options)
 	case *livekit.StartRecordingRequest_Filepath:
 		return pipeline.NewFilePipeline(r.filename, req.Options)
 	}
