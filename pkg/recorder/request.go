@@ -85,7 +85,7 @@ func (r *Recorder) GetInputUrl(req *livekit.StartRecordingRequest) (string, erro
 			return "", errors.New("room name required for template input")
 		}
 
-		r.ri.RoomName = template.RoomName
+		r.result.RoomName = template.RoomName
 		token, err := r.buildToken(template.RoomName)
 		if err != nil {
 			return "", err
