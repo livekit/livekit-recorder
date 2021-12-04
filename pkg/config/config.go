@@ -18,16 +18,15 @@ import (
 )
 
 type Config struct {
-	ApiKey          string      `yaml:"api_key"`
-	ApiSecret       string      `yaml:"api_secret"`
-	WsUrl           string      `yaml:"ws_url"`
-	HealthPort      int         `yaml:"health_port"`
-	LogLevel        string      `yaml:"log_level"`
-	TemplateAddress string      `yaml:"template_address"`
-	Redis           RedisConfig `yaml:"redis"`
-	FileOutput      FileOutput  `yaml:"file_output"`
-	Defaults        Defaults    `yaml:"defaults"`
-	Display         string      `yaml:"-"`
+	ApiKey     string      `yaml:"api_key"`
+	ApiSecret  string      `yaml:"api_secret"`
+	WsUrl      string      `yaml:"ws_url"`
+	HealthPort int         `yaml:"health_port"`
+	LogLevel   string      `yaml:"log_level"`
+	Redis      RedisConfig `yaml:"redis"`
+	FileOutput FileOutput  `yaml:"file_output"`
+	Defaults   Defaults    `yaml:"defaults"`
+	Display    string      `yaml:"-"`
 }
 
 type RedisConfig struct {
@@ -71,8 +70,7 @@ type Defaults struct {
 func NewConfig(confString string) (*Config, error) {
 	// start with defaults
 	conf := &Config{
-		LogLevel:        "info",
-		TemplateAddress: "https://recorder.livekit.io",
+		LogLevel: "info",
 		Defaults: Defaults{
 			Width:          1920,
 			Height:         1080,
@@ -122,8 +120,7 @@ func NewConfig(confString string) (*Config, error) {
 
 func TestConfig() (*Config, error) {
 	conf := &Config{
-		LogLevel:        "debug",
-		TemplateAddress: "https://recorder.livekit.io",
+		LogLevel: "debug",
 		Redis: RedisConfig{
 			Address: "localhost:6379",
 		},
