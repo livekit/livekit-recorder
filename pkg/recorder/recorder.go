@@ -14,6 +14,8 @@ import (
 )
 
 type Recorder struct {
+	ID string
+
 	conf     *config.Config
 	req      *livekit.StartRecordingRequest
 	display  *display.Display
@@ -31,6 +33,7 @@ type Recorder struct {
 
 func NewRecorder(conf *config.Config, recordingID string) *Recorder {
 	return &Recorder{
+		ID:   recordingID,
 		conf: conf,
 		result: &livekit.RecordingInfo{
 			Id: recordingID,
