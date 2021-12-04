@@ -20,14 +20,13 @@ func TestInputUrl(t *testing.T) {
 		},
 	}
 
-	expected := "https://recorder.livekit.io/#/speaker-light?url=wss%3A%2F%2Ftest.livekit.cloud&token="
-	rec := NewRecorder(&config.Config{
-		ApiKey:    "fakeKey",
-		ApiSecret: "fakeSecret",
-		WsUrl:     "wss://test.livekit.cloud",
-	}, "fakeRecordingID")
+	conf, err := config.TestConfig()
+	conf.WsUrl = "wss://fake.url.io"
+	require.NoError(t, err)
+	rec := NewRecorder(conf, "fakeRecordingID")
 
 	actual, err := rec.GetInputUrl(req)
 	require.NoError(t, err)
-	require.True(t, strings.HasPrefix(actual, expected))
+	expected := "https://recorder.livekit.io/#/speaker-light?url=wss%3A%2F%2Ffake.url.io&token="
+	require.True(t, strings.HasPrefix(actual, expected), actual)
 }
