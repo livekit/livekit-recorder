@@ -306,8 +306,8 @@ You can then use our [cli](https://github.com/livekit/livekit-cli) to submit rec
 
 ### It doesn't work at all
 
-* Make sure you're using the latest livekit-server and livekit-recorder. If using the server sdks to start and stop 
-  recordings, make sure you're using the latest for those as well. This is still in beta, and we still occasionally release breaking changes. 
+* Make sure you're using the latest cli, server sdks, livekit-server and livekit-recorder.
+  This is still in beta, and we still occasionally release breaking changes.
 
 ### I get a `"no recorders available"` error when sending a StartRecording request
 
