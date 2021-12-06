@@ -72,7 +72,7 @@ func NewConfig(confString string) (*Config, error) {
 	// start with defaults
 	conf := &Config{
 		LogLevel:        "info",
-		TemplateAddress: "https://recorder.livekit.io",
+		TemplateAddress: "https://recorder.livekit.io/#",
 		Defaults: Defaults{
 			Width:          1920,
 			Height:         1080,
@@ -125,7 +125,7 @@ func TestConfig() (*Config, error) {
 		ApiKey:          "fakeKey",
 		ApiSecret:       "fakeSecret",
 		LogLevel:        "debug",
-		TemplateAddress: "https://recorder.livekit.io",
+		TemplateAddress: "https://recorder.livekit.io/#",
 		Redis: RedisConfig{
 			Address: "localhost:6379",
 		},

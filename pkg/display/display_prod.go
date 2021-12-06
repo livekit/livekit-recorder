@@ -56,7 +56,7 @@ func (d *Display) launchXvfb(display string, width, height, depth int) error {
 }
 
 func (d *Display) launchChrome(display, url string, width, height int) error {
-	logger.Debugw("launching chrome")
+	logger.Debugw("launching chrome", "url", url)
 
 	opts := []chromedp.ExecAllocatorOption{
 		chromedp.NoFirstRun,
