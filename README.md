@@ -30,7 +30,7 @@ Next, create a `request.json`:
 
 Start the recording:
 ```shell
-mkdir -p ~/livekit/output
+mkdir -p ~/livekit/recordings
 
 docker run --rm --name demo \
     -e LIVEKIT_RECORDER_CONFIG="$(cat config.yaml)" \
