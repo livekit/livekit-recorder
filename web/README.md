@@ -3,7 +3,7 @@
 ## Using our templates
 
 We currently have 4 templates available - `speaker-light`, `speaker-dark`, `grid-light`, and `grid-dark`.  
-The `speaker` templates will show the current active speaker taking up most of the screen, with other participants in a side bar.  
+The `speaker` templates will show the current active speaker taking up most of the screen, with other participants in the side bar.  
 The `grid` templates will show a 1x1, 2x2, or 3x3 grid for up to 1, 4, or 9 participants respectively.
 
 Our templates are deployed at https://recorder.livekit.io.
@@ -17,12 +17,15 @@ It's easiest to start with a copy of one of our existing templates.
 
 2. The template **should** use `layout` names as paths (see [src/App.tsx](https://github.com/livekit/livekit-recorder/blob/main/web/src/App.tsx)).
 3. The template **should** take `url` and `token` as query parameters. `url` refers to your LiveKit server websocket url (`ws_url` in the recorder's `config.yaml`).
-4. The template **should** use the `url` and `token` parameters to connect to your LiveKit room ([src/common.ts:useParams](https://github.com/livekit/livekit-recorder/blob/main/web/src/common.ts#L37)).
+4. The template **should** use the `url` and `token` parameters to connect to your LiveKit room 
+   ([src/common.ts:useParams](https://github.com/livekit/livekit-recorder/blob/main/web/src/common.ts#L37)).
 5. The template **must** `console.log('START_RECORDING')` to start the recording.
    1. If your template does not log `START_RECORDING`, the recording will not start.
 6. The template **should** `console.log('END_RECORDING')` to stop the recording.
-   1. If your template does not log `END_RECORDING`, the recording will need to be stopped manually with either a `docker stop` if recording locally, or by sending an `EndRecordingRequest` to your LiveKit server.
-   2. See [src/common.ts:onConnected](https://github.com/livekit/livekit-recorder/blob/main/web/src/common.ts#L13) for recommended `START_RECORDING` and `END_RECORDING` implementation.
+   1. If your template does not log `END_RECORDING`, the recording will need to be stopped manually with either a 
+      `docker stop` if recording locally, or by sending an `EndRecordingRequest` to your LiveKit server.
+   2. See [src/common.ts:onConnected](https://github.com/livekit/livekit-recorder/blob/main/web/src/common.ts#L13) 
+      for recommended `START_RECORDING` and `END_RECORDING` implementation.
 
 ### Using your template
 
@@ -36,7 +39,9 @@ ws_url: wss://your-livekit-server-address.com
 template_address: https://your-template-address.com/#
 ```
 * Note: the hash is necessary if using hash routing, which is what our templates use. For example, the default 
-`template_address` is `https://recorder.livekit.io/#`. 
+  `template_address` is `https://recorder.livekit.io/#`.
+* If you want to use both your own templates and LiveKit templates, you can override the template address per 
+  request using the `template.base_url` field.
 
 Send a request to your recorder using
 ```json
