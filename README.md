@@ -11,11 +11,8 @@ the output to one or multiple rtmp streams.
 
 ## Quick start
 
-Start by filling in a `config.yaml`:
+Start by creating a `config.yaml`:
 ```
-api_key: <livekit-server-api-key>
-api_secret: <livekit-server-api-secret>
-ws_url: <livekit-server-ws-url>
 file_output:
     local: true
 ```
@@ -32,7 +29,7 @@ Start the recording:
 ```shell
 mkdir -p ~/livekit/recordings
 
-docker run --rm --name demo \
+docker run --rm --name quick-demo \
     -e LIVEKIT_RECORDER_CONFIG="$(cat config.yaml)" \
     -e RECORDING_REQUEST="$(cat basic.json)" \
     -v ~/livekit/recordings:/out \
@@ -41,93 +38,57 @@ docker run --rm --name demo \
 
 Then, to stop the recording:
 ```shell
-docker stop demo
+docker stop quick-demo
 ```
 
 You should find a `~/livekit/recordings/demo.mp4`.
 
-## Uploading to S3
+## Recording LiveKit rooms
 
-Update `file_output` in your `config.yaml`:
+If you already have a LiveKit server deployed with SSL, recording a room is simple. If not, skip to the next example.
+
+Update your `config.yaml` with the same key and secret as your deployed server, along with your server websocket address:
 ```yaml
-file_output:
-    s3:
-        access_key: <s3-access-key>
-        secret: <s3-secret>
-        region: <s3-region>
-        bucket: <s3-bucket>
+api_key: <livekit-server-api-key>
+api_secret: <livekit-server-api-secret>
+ws_url: <livekit-server-ws-url>
 ```
 
-Create a `s3.json`:
+Create a `room.json`:
 ```json
 {
-    "url": "https://www.youtube.com/watch?v=BHACKCNDMW8",
-    "filepath": "path/filename.mp4",
-    "options": {
-        "preset": "HD_60"
-    }
+  "template": {
+      "layout": "speaker-dark",
+      "room_name": "my-room"
+  },
+  "filepath": "out/room.mp4"
 }
 ```
-This time, we've added the `HD_60` preset. This will record at 1280x720, 60fps (the default is 1920x1080, 30fps).
-You can find the other presets and options [below](#presets).
 
+Join the room, either using https://example.livekit.io, or using your own client
+
+Start the recording:
 ```shell
-docker run --rm --name demo2 \
+docker run --rm --name room-demo \
     -e LIVEKIT_RECORDER_CONFIG="$(cat config.yaml)" \
-    -e RECORDING_REQUEST="$(cat s3.json)" \
+    -e RECORDING_REQUEST="$(cat room.json)" \
+    -v ~/livekit/recordings:/out \
     livekit/livekit-recorder
 ```
 
-```shell
-docker stop demo2
-```
+To stop recording, either leave the room, or `docker stop room-demo`. You'll find the file at `~/livekit/recordings/room.mp4`
 
-After the recording is stopped, the file will be uploaded to your S3 bucket.
+## Recording local rooms
 
-## Rtmp Output
-
-Create a `rtmp.json` (if you have a Twitch account you can fill in your stream key, otherwise replace the rtmp url with your provider):
-```json
-{
-    "url": "https://www.youtube.com/watch?v=aW2LvQUcwqc",
-    "rtmp": {
-        "urls": ["rtmp://live.twitch.tv/app/<stream-key>"]
-    },
-    "options": {
-        "width": "1280",
-        "height": "720",
-        "video_bitrate": 2048
-    }
-}
-```
-This time, we've set custom options to output 720p with a lower bitrate (2048 kbps - the default is 3000 kpbs). If you have sufficient bandwidth, try using `preset: FULL_HD_60` instead for a high quality stream.
-
-Start the stream:
-```shell
-docker run --rm --name demo3 \
-    -e LIVEKIT_RECORDER_CONFIG="$(cat config.yaml)" \
-    -e RECORDING_REQUEST="$(cat rtmp.json)" \
-    livekit/livekit-recorder
-```
-Note: with Twitch, it will take about 25 seconds for them to process before they begin showing the stream. 
-May be different with other providers.
-
-Stop the stream:
-```shell
-docker stop demo3
-```
-
-## Recording rooms
-
-So far, we've only been recording YouTube videos. Let's look at how to record a local LiveKit room.
-
-Find your IP as seen by docker:
+First, find your IP as seen by docker:
 * on linux, this should be `172.17.0.1`
 * on mac or windows, run `docker run -it --rm alpine nslookup host.docker.internal` and you should see something like
-`Name:	host.docker.internal Address: 192.168.65.2`
+  `Name:	host.docker.internal Address: 192.168.65.2`
 
-Update `ws_url` using this IP address in your `config.yaml`, and add `insecure`:
+Update your `config.yaml` with `ws_url` using this IP, along with adding your `api_key` and `api_secret`, and `insecure`:
 ```yaml
+api_key: <livekit-server-api-key>
+api_secret: <livekit-server-api-secret>
 ws_url: ws://192.168.65.2:7880
 insecure: true
 ```
@@ -157,14 +118,94 @@ Open https://example.livekit.io, enter the `token` you generated, and connect (k
 
 Start the recording:
 ```shell
-docker run --rm --network host --name demo3 \
+docker run --rm --network host --name local-demo \
     -e LIVEKIT_RECORDER_CONFIG="$(cat config.yaml)" \
     -e RECORDING_REQUEST="$(cat room.json)" \
     -v ~/livekit/recordings:/out \
     livekit/livekit-recorder
 ```
 
-To stop recording, either leave the room, or `docker stop demo3`. You'll find the file at `~/livekit/recordings/room.mp4`
+To stop recording, either leave the room, or `docker stop local-demo`. You'll find the file at `~/livekit/recordings/room.mp4`
+
+## Uploading to S3
+
+Update `file_output` in your `config.yaml`:
+```yaml
+file_output:
+    s3:
+        access_key: <s3-access-key>
+        secret: <s3-secret>
+        region: <s3-region>
+        bucket: <s3-bucket>
+```
+
+Create a `s3.json`:
+```json
+{
+    "template": {
+        "layout": "speaker-dark",
+        "room_name": "my-room"
+    },
+    "filepath": "path/filename.mp4",
+    "options": {
+        "preset": "HD_60"
+    }
+}
+```
+This time, we've added the `HD_60` preset. This will record at 1280x720, 60fps (the default is 1920x1080, 30fps).
+You can find the other presets and options [below](#presets).
+
+
+Join the room, and start the recording:
+```shell
+docker run --rm --name s3-demo \
+    -e LIVEKIT_RECORDER_CONFIG="$(cat config.yaml)" \
+    -e RECORDING_REQUEST="$(cat s3.json)" \
+    livekit/livekit-recorder
+```
+
+End the recording:
+```shell
+docker stop s3-demo
+```
+
+After the recording is stopped, the file will be uploaded to your S3 bucket.
+
+## Rtmp Output
+
+Create a `rtmp.json` (if you have a Twitch account you can fill in your stream key, otherwise replace the rtmp url with your provider):
+```json
+{
+    "template": {
+        "layout": "speaker-dark",
+        "room_name": "my-room"
+    },
+    "rtmp": {
+        "urls": ["rtmp://live.twitch.tv/app/<stream-key>"]
+    },
+    "options": {
+        "width": "1280",
+        "height": "720",
+        "video_bitrate": 2048
+    }
+}
+```
+This time, we've set custom options to output 720p with a lower bitrate (2048 kbps - the default is 3000 kpbs). If you have sufficient bandwidth, try using `preset: FULL_HD_60` instead for a high quality stream.
+
+Join the room, then start the stream:
+```shell
+docker run --rm --name rtmp-demo \
+    -e LIVEKIT_RECORDER_CONFIG="$(cat config.yaml)" \
+    -e RECORDING_REQUEST="$(cat rtmp.json)" \
+    livekit/livekit-recorder
+```
+Note: with Twitch, it will take about 25 seconds for them to process before they begin showing the stream. 
+May be different with other providers.
+
+Stop the stream:
+```shell
+docker stop rtmp-demo
+```
 
 ## Config
 
