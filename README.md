@@ -153,7 +153,7 @@ Start your server using `node-ip` from above:
 ./bin/livekit-server --keys "{api_key}: {api_secret}" --node-ip 192.168.65.2 --dev
 ```
 
-Open https://example.livekit.io, enter the `token` you generated, and connect.
+Open https://example.livekit.io, enter the `token` you generated, and connect (keep `ws://localhost:7880` as the LiveKit URL).
 
 Start the recording:
 ```shell
