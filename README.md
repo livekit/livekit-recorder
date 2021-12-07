@@ -48,12 +48,7 @@ You should find a `~/livekit/recordings/demo.mp4`.
 
 ## Uploading to S3
 
-Update your config.yaml and replace
-```yaml
-file_output:
-    local: true
-```
-with
+Update `file_output` in your `config.yaml`:
 ```yaml
 file_output:
     s3:
@@ -105,7 +100,7 @@ Create a `rtmp.json` (if you have a Twitch account you can fill in your stream k
     }
 }
 ```
-This time, we've set custom options to output 720p with a lower bitrate (2048 kbps - the default is 3000 kpbs). If you have good bandwidth at home, try using `preset: FULL_HD_60` instead for a high quality stream.
+This time, we've set custom options to output 720p with a lower bitrate (2048 kbps - the default is 3000 kpbs). If you have sufficient bandwidth, try using `preset: FULL_HD_60` instead for a high quality stream.
 
 Start the stream:
 ```shell
