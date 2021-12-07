@@ -119,7 +119,7 @@ docker stop demo3
 
 ## Recording rooms
 
-So far, we've only been recording YouTube videos. Let's look at how to record a LiveKit room.
+So far, we've only been recording YouTube videos. Let's look at how to record a local LiveKit room.
 
 Find your IP as seen by docker:
 * on linux, this should be `172.17.0.1`
@@ -157,7 +157,7 @@ Open https://example.livekit.io, enter the `token` you generated, and connect (k
 
 Start the recording:
 ```shell
-docker run --rm --name --network host demo3 \
+docker run --rm --network host --name demo3 \
     -e LIVEKIT_RECORDER_CONFIG="$(cat config.yaml)" \
     -e RECORDING_REQUEST="$(cat room.json)" \
     -v ~/livekit/recordings:/out \
