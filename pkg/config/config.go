@@ -24,6 +24,7 @@ type Config struct {
 	HealthPort      int         `yaml:"health_port"`
 	LogLevel        string      `yaml:"log_level"`
 	TemplateAddress string      `yaml:"template_address"`
+	Insecure        bool        `yaml:"insecure"`
 	Redis           RedisConfig `yaml:"redis"`
 	FileOutput      FileOutput  `yaml:"file_output"`
 	Defaults        Defaults    `yaml:"defaults"`

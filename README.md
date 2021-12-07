@@ -126,9 +126,16 @@ docker stop demo3
 
 So far, we've only been recording YouTube videos. Let's look at how to record a LiveKit room.
 
-To start, you'll need to have your LiveKit server [deployed](https://docs.livekit.io/deploy) with valid SSL certificates,
-using the same `api_key` and `api_secret` as the ones in your `config.yaml`. 
-The recorder will not work with a local LiveKit server, as the server needs to be reachable by our hosted templates.
+Find your IP as seen by docker:
+* on linux, this should be `172.17.0.1`
+* on mac or windows, run `docker run -it --rm alpine nslookup host.docker.internal` and you should see something like
+`Name:	host.docker.internal Address: 192.168.65.2`
+
+Update `ws_url` using this IP address in your `config.yaml`, and add `insecure`:
+```yaml
+ws_url: ws://192.168.65.2:7880
+insecure: true
+```
 
 Create a `room.json`:
 ```json
@@ -141,17 +148,21 @@ Create a `room.json`:
 }
 ```
 
-Generate a token for yourself using the livekit-server repo to join the room:
+Generate a token for yourself using livekit-server:
 ```shell
 ./bin/livekit-server --keys "{api_key}: {api_secret}" create-join-token --room my-room --identity me
 ```
 
-Open https://example.livekit.io and enter your `ws_url` under `LiveKit URL`, along with your `token`.
-* This will not work using `ws://localhost:7880` as your LiveKit URL - our hosted template will not be able to connect.
+Start your server using `node-ip` from above:
+```shell
+./bin/livekit-server --keys "{api_key}: {api_secret}" --node-ip 192.168.65.2 --dev
+```
+
+Open https://example.livekit.io, enter the `token` you generated, and connect.
 
 Start the recording:
 ```shell
-docker run --rm --name demo3 \
+docker run --rm --name --network host demo3 \
     -e LIVEKIT_RECORDER_CONFIG="$(cat config.yaml)" \
     -e RECORDING_REQUEST="$(cat room.json)" \
     -v ~/livekit/recordings:/out \
@@ -159,7 +170,6 @@ docker run --rm --name demo3 \
 ```
 
 To stop recording, either leave the room, or `docker stop demo3`. You'll find the file at `~/livekit/recordings/room.mp4`
-
 
 ## Config
 
@@ -180,6 +190,7 @@ ws_url: livekit server ws url
 health_port: http port to serve status (optional)
 log_level: valid levels are debug, info, warn, error, fatal, or panic. Defaults to debug
 template_address: template url base, can be used to host your own templates. Defaults to https://recorder.livekit.io/#
+insecure: should only be used for local testing
 redis: (service mode only)
     address: redis address, including port
     username: redis username (optional)
@@ -285,11 +296,14 @@ To run against a local livekit server, you'll need to do the following:
 * open `/usr/local/etc/redis.conf` and comment out the line that says `bind 127.0.0.1`
 * change `protected-mode yes` to `protected-mode no` in the same file
 * add `--network host` to your `docker run` command
-* update your redis address from `localhost` to your host ip as docker sees it:
-    * on linux, this should be `172.17.0.1`
-    * on mac or windows, run `docker run -it --rm alpine nslookup host.docker.internal` and you should see something like
-      `Name:	host.docker.internal
-      Address: 192.168.65.2`
+* find your IP as seen by docker
+  * `ws_url` needs to be set using the IP as Docker sees it
+  * on linux, this should be `172.17.0.1`
+  * on mac or windows, run `docker run -it --rm alpine nslookup host.docker.internal` and you should see something like
+    `Name:	host.docker.internal
+    Address: 192.168.65.2`
+* update your `redis` and `ws_url` to use this IP instead of `localhost`, and set `insecure` to true in your `config.yaml`
+* your livekit-server must be run using `--node-ip` set to the above IP
 
 These changes allow the service to connect to your local redis instance from inside the docker container.
 Finally, to build and run:
