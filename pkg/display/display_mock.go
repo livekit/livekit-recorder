@@ -2,6 +2,10 @@
 
 package display
 
+import (
+	"github.com/livekit/livekit-recorder/pkg/config"
+)
+
 type Display struct {
 	endChan chan struct{}
 }
