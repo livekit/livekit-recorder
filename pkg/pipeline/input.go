@@ -106,7 +106,7 @@ func newInputBin(isStream bool, options *livekit.RecordingOptions) (*InputBin, e
 		if err = x264Enc.SetProperty("cabac", false); err != nil {
 			return nil, err
 		}
-		if err = x264Enc.SetProperty("bframes", 0); err != nil {
+		if err = x264Enc.SetProperty("bframes", uint(0)); err != nil {
 			return nil, err
 		}
 	case config.ProfileHigh:
