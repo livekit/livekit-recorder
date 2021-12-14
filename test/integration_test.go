@@ -1,3 +1,4 @@
+//go:build integration
 // +build integration
 
 package test
@@ -10,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	livekit "github.com/livekit/protocol/proto"
+	"github.com/livekit/protocol/livekit"
 	"github.com/stretchr/testify/require"
 
 	"github.com/livekit/livekit-recorder/pkg/config"
@@ -24,8 +25,9 @@ func TestRecorder(t *testing.T) {
 	conf.ApiSecret = "secret"
 	conf.WsUrl = "ws://localhost:7880"
 
-	if !t.Run("template-test", func(t *testing.T) {
-		runFileTest(t, conf)
+	if !t.Run("file-test", func(t *testing.T) {
+		runFileTest(t, conf, config.ProfileBaseline)
+		runFileTest(t, conf, config.ProfileHigh)
 	}) {
 		t.FailNow()
 	}
@@ -37,14 +39,17 @@ func TestRecorder(t *testing.T) {
 	}
 }
 
-func runFileTest(t *testing.T, conf *config.Config) {
-	filepath := "path/file-test.mp4"
+func runFileTest(t *testing.T, conf *config.Config, profile string) {
+	filepath := fmt.Sprintf("path/file-test-%s.mp4", profile)
 	req := &livekit.StartRecordingRequest{
 		Input: &livekit.StartRecordingRequest_Url{
 			Url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
 		},
 		Output: &livekit.StartRecordingRequest_Filepath{
 			Filepath: filepath,
+		},
+		Options: &livekit.RecordingOptions{
+			Profile: profile,
 		},
 	}
 
@@ -57,7 +62,7 @@ func runFileTest(t *testing.T, conf *config.Config) {
 	})
 
 	res := rec.Run()
-	verifyFileResult(t, req, res, filepath)
+	verifyFileResult(t, req, res, filepath, profile)
 }
 
 func runRtmpTest(t *testing.T, conf *config.Config) {
@@ -84,16 +89,16 @@ func runRtmpTest(t *testing.T, conf *config.Config) {
 	time.Sleep(time.Second * 30)
 
 	// check stream
-	verifyRtmpResult(t, req, rtmpUrl)
+	verifyRtmpResult(t, req, config.ProfileMain, rtmpUrl)
 
 	// add another, check both
 	rtmpUrl2 := "rtmp://localhost:1935/stream2"
 	require.NoError(t, rec.AddOutput(rtmpUrl2))
-	verifyRtmpResult(t, req, rtmpUrl, rtmpUrl2)
+	verifyRtmpResult(t, req, config.ProfileMain, rtmpUrl, rtmpUrl2)
 
 	// remove first, check second
 	require.NoError(t, rec.RemoveOutput(rtmpUrl))
-	verifyRtmpResult(t, req, rtmpUrl2)
+	verifyRtmpResult(t, req, config.ProfileMain, rtmpUrl2)
 
 	// stop
 	rec.Stop()
@@ -106,19 +111,19 @@ func runRtmpTest(t *testing.T, conf *config.Config) {
 	require.NotEqual(t, int64(0), res.Rtmp[1].Duration)
 }
 
-func verifyFileResult(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.RecordingInfo, filename string) {
+func verifyFileResult(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.RecordingInfo, filename, profile string) {
 	// check error
 	require.Empty(t, res.Error)
-	verify(t, req, res, filename, false)
+	verify(t, req, res, filename, profile, false)
 }
 
-func verifyRtmpResult(t *testing.T, req *livekit.StartRecordingRequest, urls ...string) {
+func verifyRtmpResult(t *testing.T, req *livekit.StartRecordingRequest, profile string, urls ...string) {
 	for _, url := range urls {
-		verify(t, req, nil, url, true)
+		verify(t, req, nil, url, profile, true)
 	}
 }
 
-func verify(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.RecordingInfo, input string, isStream bool) {
+func verify(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.RecordingInfo, input, profile string, isStream bool) {
 	info, err := ffprobe(input)
 	require.NoError(t, err)
 
@@ -151,6 +156,15 @@ func verify(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.Recor
 		case "video":
 			hasVideo = true
 			require.Equal(t, "h264", stream.CodecName)
+			switch profile {
+			case config.ProfileBaseline:
+				require.Equal(t, "High 4:4:4 Predictive", stream.Profile)
+			case config.ProfileMain:
+				require.Equal(t, "High 4:4:4 Predictive", stream.Profile)
+			case config.ProfileHigh:
+				require.Equal(t, "High 4:4:4 Predictive", stream.Profile)
+			}
+
 			require.Equal(t, req.Options.Width, stream.Width)
 			require.Equal(t, req.Options.Height, stream.Height)
 			require.Equal(t, fmt.Sprintf("%d/1", req.Options.Framerate), stream.RFrameRate)
@@ -168,6 +182,7 @@ type FFProbeInfo struct {
 	Streams []struct {
 		CodecName string `json:"codec_name"`
 		CodecType string `json:"codec_type"`
+		Profile   string `json:"profile"`
 
 		// audio
 		SampleRate    string `json:"sample_rate"`

@@ -1,3 +1,4 @@
+//go:build !test
 // +build !test
 
 package pipeline
@@ -5,8 +6,10 @@ package pipeline
 import (
 	"fmt"
 
-	livekit "github.com/livekit/protocol/proto"
+	"github.com/livekit/protocol/livekit"
 	"github.com/tinyzimmer/go-gst/gst"
+
+	"github.com/livekit/livekit-recorder/pkg/config"
 )
 
 type InputBin struct {
@@ -89,12 +92,31 @@ func newInputBin(isStream bool, options *livekit.RecordingOptions) (*InputBin, e
 	if err != nil {
 		return nil, err
 	}
-	err = x264Enc.SetProperty("bitrate", uint(options.VideoBitrate))
-	if err != nil {
+	if err = x264Enc.SetProperty("bitrate", uint(options.VideoBitrate)); err != nil {
 		return nil, err
 	}
 	x264Enc.SetArg("speed-preset", "veryfast")
 	x264Enc.SetArg("tune", "zerolatency")
+
+	switch options.Profile {
+	case config.ProfileBaseline:
+		if err = x264Enc.SetProperty("dct8x8", "false"); err != nil {
+			return nil, err
+		}
+		if err = x264Enc.SetProperty("cabac", "false"); err != nil {
+			return nil, err
+		}
+		if err = x264Enc.SetProperty("bframes", 0); err != nil {
+			return nil, err
+		}
+	case config.ProfileHigh:
+		// do nothing
+	default:
+		// config.ProfileMain is the default
+		if err = x264Enc.SetProperty("dct8x8", "false"); err != nil {
+			return nil, err
+		}
+	}
 
 	videoQueue, err := gst.NewElement("queue")
 	if err != nil {
