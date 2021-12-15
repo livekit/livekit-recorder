@@ -113,7 +113,7 @@ func newInputBin(isStream bool, options *livekit.RecordingOptions) (*InputBin, e
 		// do nothing
 	default:
 		// config.ProfileMain is the default
-		if err = x264Enc.SetProperty("dct8x8", "false"); err != nil {
+		if err = x264Enc.SetProperty("dct8x8", false); err != nil {
 			return nil, err
 		}
 	}
