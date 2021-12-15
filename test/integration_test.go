@@ -20,7 +20,7 @@ import (
 )
 
 var confString = `
-log_level: debug
+log_level: info
 api_key: key
 api_secret: secret
 ws_url: ws://localhost:7880`
@@ -39,7 +39,7 @@ func TestRecorder(t *testing.T) {
 		runFileTest(t, conf, &livekit.RecordingOptions{
 			Height:       720,
 			Width:        1280,
-			VideoBitrate: 3000,
+			VideoBitrate: 1500,
 			Profile:      config.ProfileBaseline,
 		})
 	}) {
@@ -68,7 +68,7 @@ func runFileTest(t *testing.T, conf *config.Config, options *livekit.RecordingOp
 	filepath := fmt.Sprintf("path/file-test-%d.mp4", time.Now().Unix())
 	req := &livekit.StartRecordingRequest{
 		Input: &livekit.StartRecordingRequest_Url{
-			Url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+			Url: "https://www.youtube.com/watch?v=4cJpiOPKH14&t=30s",
 		},
 		Output: &livekit.StartRecordingRequest_Filepath{
 			Filepath: filepath,
@@ -77,7 +77,10 @@ func runFileTest(t *testing.T, conf *config.Config, options *livekit.RecordingOp
 	}
 
 	rec := recorder.NewRecorder(conf, "file_test")
-	defer rec.Close()
+	defer func() {
+		rec.Close()
+		time.Sleep(time.Millisecond * 100)
+	}()
 
 	require.NoError(t, rec.Validate(req))
 
@@ -104,7 +107,10 @@ func runRtmpTest(t *testing.T, conf *config.Config) {
 	}
 
 	rec := recorder.NewRecorder(conf, "rtmp_test")
-	defer rec.Close()
+	defer func() {
+		rec.Close()
+		time.Sleep(time.Millisecond * 100)
+	}()
 
 	require.NoError(t, rec.Validate(req))
 	resChan := make(chan *livekit.RecordingInfo, 1)
@@ -154,6 +160,12 @@ func verify(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.Recor
 	info, err := ffprobe(input)
 	require.NoError(t, err)
 
+	requireInRange := func(actual string, min, max float64) {
+		v, err := strconv.ParseFloat(actual, 64)
+		require.NoError(t, err)
+		require.True(t, min <= v && v <= max, "min: %v, max: %v, actual: %v", min, max, v)
+	}
+
 	// check format info
 	if isStream {
 		require.Equal(t, "flv", info.Format.FormatName)
@@ -161,7 +173,7 @@ func verify(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.Recor
 		require.NotEqual(t, 0, info.Format.Size)
 		require.NotNil(t, res.File)
 		require.NotEqual(t, int64(0), res.File.Duration)
-		compareInfo(t, int32(res.File.Duration), info.Format.Duration, 0.1)
+		requireInRange(info.Format.Duration, float64(res.File.Duration-1), float64(res.File.Duration+1))
 		require.Equal(t, "x264", info.Format.Tags.Encoder)
 	}
 	require.Equal(t, 100, info.Format.ProbeScore)
@@ -178,11 +190,15 @@ func verify(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.Recor
 			require.Equal(t, "stereo", stream.ChannelLayout)
 			require.Equal(t, fmt.Sprint(req.Options.AudioFrequency), stream.SampleRate)
 			if !isStream {
-				compareInfo(t, req.Options.AudioBitrate*1000, stream.BitRate, 0.1)
+				// audio bitrate
+				expected := float64(req.Options.AudioBitrate * 1000)
+				requireInRange(stream.BitRate, expected*0.95, expected*1.15)
 			}
 		case "video":
 			hasVideo = true
 			require.Equal(t, "h264", stream.CodecName)
+
+			// profile
 			switch req.Options.Profile {
 			case config.ProfileBaseline:
 				require.Equal(t, "Constrained Baseline", stream.Profile)
@@ -192,6 +208,7 @@ func verify(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.Recor
 				require.Equal(t, "High", stream.Profile)
 			}
 
+			// dims
 			require.Equal(t, req.Options.Width, stream.Width)
 			require.Equal(t, req.Options.Height, stream.Height)
 
@@ -211,7 +228,9 @@ func verify(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.Recor
 			}
 
 			if !isStream {
-				compareInfo(t, req.Options.VideoBitrate*1000, stream.BitRate, 0.1)
+				expected := float64(req.Options.VideoBitrate * 1000)
+				// actual video bitrate can vary greatly
+				requireInRange(stream.BitRate, expected*0.5, expected*1.1)
 			}
 		default:
 			t.Fatalf("unrecognized stream type %s", stream.CodecType)
@@ -266,15 +285,4 @@ func ffprobe(input string) (*FFProbeInfo, error) {
 	info := &FFProbeInfo{}
 	err = json.Unmarshal(out, info)
 	return info, err
-}
-
-func compareInfo(t *testing.T, expected int32, actual string, maxVariance float64) {
-	a, err := strconv.ParseFloat(actual, 64)
-	require.NoError(t, err)
-	e := float64(expected)
-
-	require.True(t,
-		a/e >= 1-maxVariance && a/e <= 1+maxVariance,
-		"expected: %v, actual: %v", expected, actual,
-	)
 }
