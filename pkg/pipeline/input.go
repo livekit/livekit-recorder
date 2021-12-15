@@ -96,26 +96,6 @@ func newInputBin(isStream bool, options *livekit.RecordingOptions) (*InputBin, e
 		return nil, err
 	}
 
-	// switch options.Profile {
-	// case config.ProfileBaseline:
-	// 	if err = x264Enc.SetProperty("dct8x8", false); err != nil {
-	// 		return nil, err
-	// 	}
-	// 	if err = x264Enc.SetProperty("cabac", false); err != nil {
-	// 		return nil, err
-	// 	}
-	// 	if err = x264Enc.SetProperty("bframes", uint(0)); err != nil {
-	// 		return nil, err
-	// 	}
-	// case config.ProfileHigh:
-	// 	// do nothing
-	// default:
-	// 	// config.ProfileMain is the default
-	// if err = x264Enc.SetProperty("dct8x8", false); err != nil {
-	// 	return nil, err
-	// }
-	// }
-
 	videoQueue, err := gst.NewElement("queue")
 	if err != nil {
 		return nil, err

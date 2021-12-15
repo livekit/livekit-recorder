@@ -158,7 +158,7 @@ func verify(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.Recor
 			require.Equal(t, "h264", stream.CodecName)
 			switch profile {
 			case config.ProfileBaseline:
-				require.Equal(t, "Baseline", stream.Profile)
+				require.Equal(t, "Constrained Baseline", stream.Profile)
 			case config.ProfileMain:
 				require.Equal(t, "Main", stream.Profile)
 			case config.ProfileHigh:
