@@ -112,16 +112,16 @@ func runRtmpTest(t *testing.T, conf *config.Config) {
 	time.Sleep(time.Second * 30)
 
 	// check stream
-	verifyRtmpResult(t, req, config.ProfileMain, rtmpUrl)
+	verifyRtmpResult(t, req, rtmpUrl)
 
 	// add another, check both
 	rtmpUrl2 := "rtmp://localhost:1935/stream2"
 	require.NoError(t, rec.AddOutput(rtmpUrl2))
-	verifyRtmpResult(t, req, config.ProfileMain, rtmpUrl, rtmpUrl2)
+	verifyRtmpResult(t, req, rtmpUrl, rtmpUrl2)
 
 	// remove first, check second
 	require.NoError(t, rec.RemoveOutput(rtmpUrl))
-	verifyRtmpResult(t, req, config.ProfileMain, rtmpUrl2)
+	verifyRtmpResult(t, req, rtmpUrl2)
 
 	// stop
 	rec.Stop()
