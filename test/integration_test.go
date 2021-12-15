@@ -162,7 +162,7 @@ func verify(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.Recor
 			case config.ProfileMain:
 				require.Equal(t, "Main", stream.Profile)
 			case config.ProfileHigh:
-				require.Equal(t, "High 4:4:4 Predictive", stream.Profile)
+				require.Equal(t, "High", stream.Profile)
 			}
 
 			require.Equal(t, req.Options.Width, stream.Width)

@@ -23,6 +23,12 @@ const (
 	ProfileHigh     = "high"
 )
 
+var validProfiles = map[string]bool{
+	ProfileBaseline: true,
+	ProfileMain:     true,
+	ProfileHigh:     true,
+}
+
 type Config struct {
 	ApiKey          string      `yaml:"api_key"`
 	ApiSecret       string      `yaml:"api_secret"`
@@ -106,6 +112,10 @@ func NewConfig(confString string) (*Config, error) {
 
 	if conf.Defaults.Preset != livekit.RecordingPreset_NONE {
 		conf.Defaults = fromProto(fromPreset(conf.Defaults.Preset))
+	}
+
+	if !validProfiles[conf.Defaults.Profile] {
+		return nil, fmt.Errorf("invalid profile %s", conf.Defaults.Profile)
 	}
 
 	// GStreamer log level
@@ -217,7 +227,7 @@ func (c *Config) ApplyDefaults(req *livekit.StartRecordingRequest) {
 	if req.Options.VideoBitrate == 0 {
 		req.Options.VideoBitrate = c.Defaults.VideoBitrate
 	}
-	if req.Options.Profile == "" {
+	if !validProfiles[req.Options.Profile] {
 		req.Options.Profile = c.Defaults.Profile
 	}
 
