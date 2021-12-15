@@ -25,22 +25,43 @@ func TestRecorder(t *testing.T) {
 	conf.ApiSecret = "secret"
 	conf.WsUrl = "ws://localhost:7880"
 
-	if !t.Run("file-test", func(t *testing.T) {
-		runFileTest(t, conf, config.ProfileBaseline)
-		runFileTest(t, conf, config.ProfileHigh)
+	if !t.Run("file-test-defaults", func(t *testing.T) {
+		runFileTest(t, conf, nil)
 	}) {
-		// t.FailNow()
+		t.FailNow()
+	}
+
+	if !t.Run("file-test-baseline", func(t *testing.T) {
+		runFileTest(t, conf, &livekit.RecordingOptions{
+			Height:       720,
+			Width:        1280,
+			VideoBitrate: 3000,
+			Profile:      config.ProfileBaseline,
+		})
+	}) {
+		t.FailNow()
+	}
+
+	if !t.Run("file-test-high", func(t *testing.T) {
+		runFileTest(t, conf, &livekit.RecordingOptions{
+			Framerate:      60,
+			AudioFrequency: 48000,
+			VideoBitrate:   6000,
+			Profile:        config.ProfileHigh,
+		})
+	}) {
+		t.FailNow()
 	}
 
 	if !t.Run("rtmp-test", func(t *testing.T) {
 		runRtmpTest(t, conf)
 	}) {
-		// t.FailNow()
+		t.FailNow()
 	}
 }
 
-func runFileTest(t *testing.T, conf *config.Config, profile string) {
-	filepath := fmt.Sprintf("path/file-test-%s.mp4", profile)
+func runFileTest(t *testing.T, conf *config.Config, options *livekit.RecordingOptions) {
+	filepath := fmt.Sprintf("path/file-test-%d.mp4", time.Now().Unix())
 	req := &livekit.StartRecordingRequest{
 		Input: &livekit.StartRecordingRequest_Url{
 			Url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
@@ -48,9 +69,7 @@ func runFileTest(t *testing.T, conf *config.Config, profile string) {
 		Output: &livekit.StartRecordingRequest_Filepath{
 			Filepath: filepath,
 		},
-		Options: &livekit.RecordingOptions{
-			Profile: profile,
-		},
+		Options: options,
 	}
 
 	rec := recorder.NewRecorder(conf, "room_test")
@@ -62,7 +81,7 @@ func runFileTest(t *testing.T, conf *config.Config, profile string) {
 	})
 
 	res := rec.Run()
-	verifyFileResult(t, req, res, filepath, profile)
+	verifyFileResult(t, req, res, filepath)
 }
 
 func runRtmpTest(t *testing.T, conf *config.Config) {
@@ -111,19 +130,19 @@ func runRtmpTest(t *testing.T, conf *config.Config) {
 	require.NotEqual(t, int64(0), res.Rtmp[1].Duration)
 }
 
-func verifyFileResult(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.RecordingInfo, filename, profile string) {
+func verifyFileResult(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.RecordingInfo, filename string) {
 	// check error
 	require.Empty(t, res.Error)
-	verify(t, req, res, filename, profile, false)
+	verify(t, req, res, filename, false)
 }
 
-func verifyRtmpResult(t *testing.T, req *livekit.StartRecordingRequest, profile string, urls ...string) {
+func verifyRtmpResult(t *testing.T, req *livekit.StartRecordingRequest, urls ...string) {
 	for _, url := range urls {
-		verify(t, req, nil, url, profile, true)
+		verify(t, req, nil, url, true)
 	}
 }
 
-func verify(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.RecordingInfo, input, profile string, isStream bool) {
+func verify(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.RecordingInfo, input string, isStream bool) {
 	info, err := ffprobe(input)
 	require.NoError(t, err)
 
@@ -156,7 +175,7 @@ func verify(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.Recor
 		case "video":
 			hasVideo = true
 			require.Equal(t, "h264", stream.CodecName)
-			switch profile {
+			switch req.Options.Profile {
 			case config.ProfileBaseline:
 				require.Equal(t, "Constrained Baseline", stream.Profile)
 			case config.ProfileMain:
