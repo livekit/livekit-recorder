@@ -173,7 +173,7 @@ func verify(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.Recor
 		require.NotEqual(t, 0, info.Format.Size)
 		require.NotNil(t, res.File)
 		require.NotEqual(t, int64(0), res.File.Duration)
-		requireInRange(info.Format.Duration, float64(res.File.Duration-1), float64(res.File.Duration+1))
+		requireInRange(info.Format.Duration, float64(res.File.Duration-2), float64(res.File.Duration+2))
 		require.Equal(t, "x264", info.Format.Tags.Encoder)
 	}
 	require.Equal(t, 100, info.Format.ProbeScore)
