@@ -76,15 +76,17 @@ func runFileTest(t *testing.T, conf *config.Config, options *livekit.RecordingOp
 		Options: options,
 	}
 
-	rec := recorder.NewRecorder(conf, "room_test")
+	rec := recorder.NewRecorder(conf, "file_test")
+	defer rec.Close()
+
 	require.NoError(t, rec.Validate(req))
 
 	// record for 15s. Takes about 5s to start
 	time.AfterFunc(time.Second*20, func() {
 		rec.Stop()
 	})
-
 	res := rec.Run()
+
 	verifyFileResult(t, req, res, filepath)
 }
 
@@ -102,6 +104,8 @@ func runRtmpTest(t *testing.T, conf *config.Config) {
 	}
 
 	rec := recorder.NewRecorder(conf, "rtmp_test")
+	defer rec.Close()
+
 	require.NoError(t, rec.Validate(req))
 	resChan := make(chan *livekit.RecordingInfo, 1)
 	go func() {
@@ -157,7 +161,7 @@ func verify(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.Recor
 		require.NotEqual(t, 0, info.Format.Size)
 		require.NotNil(t, res.File)
 		require.NotEqual(t, int64(0), res.File.Duration)
-		compareInfo(t, int32(res.File.Duration), info.Format.Duration, 0.95)
+		compareInfo(t, int32(res.File.Duration), info.Format.Duration, 0.1)
 		require.Equal(t, "x264", info.Format.Tags.Encoder)
 	}
 	require.Equal(t, 100, info.Format.ProbeScore)
@@ -174,7 +178,7 @@ func verify(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.Recor
 			require.Equal(t, "stereo", stream.ChannelLayout)
 			require.Equal(t, fmt.Sprint(req.Options.AudioFrequency), stream.SampleRate)
 			if !isStream {
-				compareInfo(t, req.Options.AudioBitrate*1000, stream.BitRate, 0.95)
+				compareInfo(t, req.Options.AudioBitrate*1000, stream.BitRate, 0.1)
 			}
 		case "video":
 			hasVideo = true
@@ -188,13 +192,14 @@ func verify(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.Recor
 				require.Equal(t, "High", stream.Profile)
 			}
 
-			require.Equal(t, int32(1920), stream.Width)
-			require.Equal(t, int32(1080), stream.Height)
+			require.Equal(t, req.Options.Width, stream.Width)
+			require.Equal(t, req.Options.Height, stream.Height)
 
+			// framerate always expressed as a fraction
 			if strings.HasSuffix(stream.RFrameRate, "/1") {
 				require.Equal(t, fmt.Sprintf("%d/1", req.Options.Framerate), stream.RFrameRate)
 			} else {
-				// framerate occasionally comes through as something like 359/12 instead of 30/1
+				// actual value can be something like 359/12 or 30000/1001 instead of 30/1
 				framerate := strings.Split(stream.RFrameRate, "/")
 				require.Len(t, framerate, 2)
 				num, err := strconv.Atoi(framerate[0])
@@ -206,7 +211,7 @@ func verify(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.Recor
 			}
 
 			if !isStream {
-				compareInfo(t, req.Options.VideoBitrate*1000, stream.BitRate, 0.95)
+				compareInfo(t, req.Options.VideoBitrate*1000, stream.BitRate, 0.1)
 			}
 		default:
 			t.Fatalf("unrecognized stream type %s", stream.CodecType)
@@ -263,14 +268,13 @@ func ffprobe(input string) (*FFProbeInfo, error) {
 	return info, err
 }
 
-func compareInfo(t *testing.T, expected int32, actual string, threshold float64) {
-	parsed, err := strconv.ParseFloat(actual, 64)
+func compareInfo(t *testing.T, expected int32, actual string, maxVariance float64) {
+	a, err := strconv.ParseFloat(actual, 64)
 	require.NoError(t, err)
+	e := float64(expected)
 
-	opt := float64(expected)
-	if parsed < opt {
-		require.Greater(t, threshold, (parsed-opt)/parsed)
-	} else {
-		require.Greater(t, threshold, (opt-parsed)/opt)
-	}
+	require.True(t,
+		a/e >= 1-maxVariance && a/e <= 1+maxVariance,
+		"expected: %v, actual: %v", expected, actual,
+	)
 }
