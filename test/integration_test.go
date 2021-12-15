@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,14 +19,15 @@ import (
 	"github.com/livekit/livekit-recorder/pkg/recorder"
 )
 
-func TestRecorder(t *testing.T) {
-	conf, err := config.NewConfig("")
-	require.NoError(t, err)
+var confString = `
+log_level: debug
+api_key: key
+api_secret: secret
+ws_url: ws://localhost:7880`
 
-	conf.LogLevel = "debug"
-	conf.ApiKey = "key"
-	conf.ApiSecret = "secret"
-	conf.WsUrl = "ws://localhost:7880"
+func TestRecorder(t *testing.T) {
+	conf, err := config.NewConfig(confString)
+	require.NoError(t, err)
 
 	if !t.Run("file-test-defaults", func(t *testing.T) {
 		runFileTest(t, conf, nil)
@@ -172,7 +174,7 @@ func verify(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.Recor
 			require.Equal(t, "stereo", stream.ChannelLayout)
 			require.Equal(t, fmt.Sprint(req.Options.AudioFrequency), stream.SampleRate)
 			if !isStream {
-				compareInfo(t, req.Options.AudioBitrate*1000, stream.BitRate, 0.9)
+				compareInfo(t, req.Options.AudioBitrate*1000, stream.BitRate, 0.95)
 			}
 		case "video":
 			hasVideo = true
@@ -186,11 +188,25 @@ func verify(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.Recor
 				require.Equal(t, "High", stream.Profile)
 			}
 
-			require.Equal(t, req.Options.Width, stream.Width)
-			require.Equal(t, req.Options.Height, stream.Height)
-			require.Equal(t, fmt.Sprintf("%d/1", req.Options.Framerate), stream.RFrameRate)
+			require.Equal(t, int32(1920), stream.Width)
+			require.Equal(t, int32(1080), stream.Height)
+
+			if strings.HasSuffix(stream.RFrameRate, "/1") {
+				require.Equal(t, fmt.Sprintf("%d/1", req.Options.Framerate), stream.RFrameRate)
+			} else {
+				// framerate occasionally comes through as something like 359/12 instead of 30/1
+				framerate := strings.Split(stream.RFrameRate, "/")
+				require.Len(t, framerate, 2)
+				num, err := strconv.Atoi(framerate[0])
+				require.NoError(t, err)
+				den, err := strconv.Atoi(framerate[1])
+				require.NoError(t, err)
+				diff := (float32(num) / float32(den)) / float32(req.Options.Framerate)
+				require.True(t, diff < 1.05 && diff > 0.95)
+			}
+
 			if !isStream {
-				compareInfo(t, req.Options.VideoBitrate*1000, stream.BitRate, 0.9)
+				compareInfo(t, req.Options.VideoBitrate*1000, stream.BitRate, 0.95)
 			}
 		default:
 			t.Fatalf("unrecognized stream type %s", stream.CodecType)

@@ -75,6 +75,17 @@ func newInputBin(isStream bool, options *livekit.RecordingOptions) (*InputBin, e
 		return nil, err
 	}
 
+	framerateCaps, err := gst.NewElement("capsfilter")
+	if err != nil {
+		return nil, err
+	}
+	err = framerateCaps.SetProperty("caps", gst.NewCapsFromString(
+		fmt.Sprintf("video/x-raw,framerate=%d/1", options.Framerate),
+	))
+	if err != nil {
+		return nil, err
+	}
+
 	x264Enc, err := gst.NewElement("x264enc")
 	if err != nil {
 		return nil, err
@@ -85,11 +96,11 @@ func newInputBin(isStream bool, options *livekit.RecordingOptions) (*InputBin, e
 	x264Enc.SetArg("speed-preset", "veryfast")
 	x264Enc.SetArg("tune", "zerolatency")
 
-	videoCapsFilter, err := gst.NewElement("capsfilter")
+	profileCaps, err := gst.NewElement("capsfilter")
 	if err != nil {
 		return nil, err
 	}
-	err = videoCapsFilter.SetProperty("caps", gst.NewCapsFromString(
+	err = profileCaps.SetProperty("caps", gst.NewCapsFromString(
 		fmt.Sprintf("video/x-h264,profile=%s,framerate=%d/1", options.Profile, options.Framerate),
 	))
 	if err != nil {
@@ -132,7 +143,7 @@ func newInputBin(isStream bool, options *livekit.RecordingOptions) (*InputBin, e
 		// audio
 		pulseSrc, audioConvert, audioCapsFilter, faac, audioQueue,
 		// video
-		xImageSrc, videoConvert, x264Enc, videoCapsFilter, videoQueue,
+		xImageSrc, videoConvert, framerateCaps, x264Enc, profileCaps, videoQueue,
 		// mux
 		mux,
 	)
@@ -150,7 +161,7 @@ func newInputBin(isStream bool, options *livekit.RecordingOptions) (*InputBin, e
 		isStream:      isStream,
 		bin:           bin,
 		audioElements: []*gst.Element{pulseSrc, audioConvert, audioCapsFilter, faac, audioQueue},
-		videoElements: []*gst.Element{xImageSrc, videoConvert, x264Enc, videoCapsFilter, videoQueue},
+		videoElements: []*gst.Element{xImageSrc, videoConvert, framerateCaps, x264Enc, profileCaps, videoQueue},
 		audioQueue:    audioQueue,
 		videoQueue:    videoQueue,
 		mux:           mux,

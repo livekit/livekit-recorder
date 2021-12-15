@@ -123,7 +123,7 @@ func NewConfig(confString string) (*Config, error) {
 		var gstDebug int
 		switch conf.LogLevel {
 		case "debug":
-			gstDebug = 3
+			gstDebug = 2
 		case "info", "warn", "error":
 			gstDebug = 1
 		case "panic":
