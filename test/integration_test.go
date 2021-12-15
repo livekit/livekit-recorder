@@ -29,13 +29,13 @@ func TestRecorder(t *testing.T) {
 		runFileTest(t, conf, config.ProfileBaseline)
 		runFileTest(t, conf, config.ProfileHigh)
 	}) {
-		t.FailNow()
+		// t.FailNow()
 	}
 
 	if !t.Run("rtmp-test", func(t *testing.T) {
 		runRtmpTest(t, conf)
 	}) {
-		t.FailNow()
+		// t.FailNow()
 	}
 }
 
@@ -158,9 +158,9 @@ func verify(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.Recor
 			require.Equal(t, "h264", stream.CodecName)
 			switch profile {
 			case config.ProfileBaseline:
-				require.Equal(t, "High 4:4:4 Predictive", stream.Profile)
+				require.Equal(t, "Baseline", stream.Profile)
 			case config.ProfileMain:
-				require.Equal(t, "High 4:4:4 Predictive", stream.Profile)
+				require.Equal(t, "Main", stream.Profile)
 			case config.ProfileHigh:
 				require.Equal(t, "High 4:4:4 Predictive", stream.Profile)
 			}

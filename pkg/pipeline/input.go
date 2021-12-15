@@ -8,8 +8,6 @@ import (
 
 	"github.com/livekit/protocol/livekit"
 	"github.com/tinyzimmer/go-gst/gst"
-
-	"github.com/livekit/livekit-recorder/pkg/config"
 )
 
 type InputBin struct {
@@ -77,17 +75,6 @@ func newInputBin(isStream bool, options *livekit.RecordingOptions) (*InputBin, e
 		return nil, err
 	}
 
-	videoCapsFilter, err := gst.NewElement("capsfilter")
-	if err != nil {
-		return nil, err
-	}
-	err = videoCapsFilter.SetProperty("caps", gst.NewCapsFromString(
-		fmt.Sprintf("video/x-raw,framerate=%d/1", options.Framerate),
-	))
-	if err != nil {
-		return nil, err
-	}
-
 	x264Enc, err := gst.NewElement("x264enc")
 	if err != nil {
 		return nil, err
@@ -98,25 +85,36 @@ func newInputBin(isStream bool, options *livekit.RecordingOptions) (*InputBin, e
 	x264Enc.SetArg("speed-preset", "veryfast")
 	x264Enc.SetArg("tune", "zerolatency")
 
-	switch options.Profile {
-	case config.ProfileBaseline:
-		if err = x264Enc.SetProperty("dct8x8", false); err != nil {
-			return nil, err
-		}
-		if err = x264Enc.SetProperty("cabac", false); err != nil {
-			return nil, err
-		}
-		if err = x264Enc.SetProperty("bframes", uint(0)); err != nil {
-			return nil, err
-		}
-	case config.ProfileHigh:
-		// do nothing
-	default:
-		// config.ProfileMain is the default
-		if err = x264Enc.SetProperty("dct8x8", false); err != nil {
-			return nil, err
-		}
+	videoCapsFilter, err := gst.NewElement("capsfilter")
+	if err != nil {
+		return nil, err
 	}
+	err = videoCapsFilter.SetProperty("caps", gst.NewCapsFromString(
+		fmt.Sprintf("video/x-h264,profile=%s,framerate=%d/1", options.Profile, options.Framerate),
+	))
+	if err != nil {
+		return nil, err
+	}
+
+	// switch options.Profile {
+	// case config.ProfileBaseline:
+	// 	if err = x264Enc.SetProperty("dct8x8", false); err != nil {
+	// 		return nil, err
+	// 	}
+	// 	if err = x264Enc.SetProperty("cabac", false); err != nil {
+	// 		return nil, err
+	// 	}
+	// 	if err = x264Enc.SetProperty("bframes", uint(0)); err != nil {
+	// 		return nil, err
+	// 	}
+	// case config.ProfileHigh:
+	// 	// do nothing
+	// default:
+	// 	// config.ProfileMain is the default
+	// if err = x264Enc.SetProperty("dct8x8", false); err != nil {
+	// 	return nil, err
+	// }
+	// }
 
 	videoQueue, err := gst.NewElement("queue")
 	if err != nil {
