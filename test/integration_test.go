@@ -19,10 +19,8 @@ import (
 )
 
 func TestRecorder(t *testing.T) {
-	conf, err := config.NewConfig("")
+	conf, err := config.TestConfig()
 	require.NoError(t, err)
-	conf.ApiKey = "key"
-	conf.ApiSecret = "secret"
 	conf.WsUrl = "ws://localhost:7880"
 
 	if !t.Run("file-test-defaults", func(t *testing.T) {
