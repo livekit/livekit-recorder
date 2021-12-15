@@ -152,7 +152,7 @@ func newInputBin(isStream bool, options *livekit.RecordingOptions) (*InputBin, e
 		// audio
 		pulseSrc, audioConvert, audioCapsFilter, faac, audioQueue,
 		// video
-		xImageSrc, videoConvert, videoCapsFilter, x264Enc, videoQueue,
+		xImageSrc, videoConvert, x264Enc, videoCapsFilter, videoQueue,
 		// mux
 		mux,
 	)
@@ -170,7 +170,7 @@ func newInputBin(isStream bool, options *livekit.RecordingOptions) (*InputBin, e
 		isStream:      isStream,
 		bin:           bin,
 		audioElements: []*gst.Element{pulseSrc, audioConvert, audioCapsFilter, faac, audioQueue},
-		videoElements: []*gst.Element{xImageSrc, videoConvert, videoCapsFilter, x264Enc, videoQueue},
+		videoElements: []*gst.Element{xImageSrc, videoConvert, x264Enc, videoCapsFilter, videoQueue},
 		audioQueue:    audioQueue,
 		videoQueue:    videoQueue,
 		mux:           mux,
