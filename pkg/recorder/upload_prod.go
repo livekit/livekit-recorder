@@ -1,19 +1,21 @@
+//go:build !test
 // +build !test
 
 package recorder
 
 import (
 	"bytes"
+	"cloud.google.com/go/storage"
 	"context"
 	"fmt"
-	"net/url"
-	"os"
-
 	"github.com/Azure/azure-storage-blob-go/azblob"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"io"
+	"net/url"
+	"os"
 )
 
 // TODO: write to persistent volume, use separate upload process
@@ -90,4 +92,30 @@ func (r *Recorder) uploadAzure() error {
 		Parallelism:     16,
 	})
 	return err
+}
+
+func (r *Recorder) uploadGCP() error {
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	file, err := os.Open(r.filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	wc := client.Bucket(r.conf.FileOutput.GCPConfig.Bucket).Object(r.filepath).NewWriter(ctx)
+
+	if _, err = io.Copy(wc, file); err != nil {
+		return fmt.Errorf("io.Copy: %v", err)
+	}
+
+	if err := wc.Close(); err != nil {
+		return fmt.Errorf("Writer.Close: %v", err)
+	}
+	return nil
 }
