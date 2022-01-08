@@ -4,6 +4,8 @@
 package display
 
 import (
+	"github.com/livekit/protocol/livekit"
+
 	"github.com/livekit/livekit-recorder/pkg/config"
 )
 
