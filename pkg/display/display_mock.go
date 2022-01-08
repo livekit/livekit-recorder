@@ -1,3 +1,4 @@
+//go:build test
 // +build test
 
 package display
@@ -16,7 +17,7 @@ func New() *Display {
 	}
 }
 
-func (d *Display) Launch(conf *config.Config, url string, width, height, depth int) error {
+func (d *Display) Launch(conf *config.Config, url string, opts *livekit.RecordingOptions, isTemplate bool) error {
 	return nil
 }
 
