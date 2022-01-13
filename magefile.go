@@ -37,7 +37,7 @@ func Integration() error {
 }
 
 func Docker() error {
-	return run(fmt.Sprintf("docker build -t %s:v%s .", imageName, version.Version))
+	return run(fmt.Sprintf("docker build -t %s:v%s -f build/Dockerfile .", imageName, version.Version))
 }
 
 func PublishDocker() error {
