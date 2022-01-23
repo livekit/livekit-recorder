@@ -103,6 +103,10 @@ func (r *Recorder) Run() *livekit.RecordingInfo {
 			})
 		}
 	case *livekit.StartRecordingRequest_Filepath:
+		if r.conf.FileOutput.StreamingUpload != nil {
+			// streaming upload, nothing to do here
+			return r.result
+		}
 		r.result.File = &livekit.FileResult{
 			Duration: time.Since(start).Milliseconds() / 1000,
 		}
@@ -138,7 +142,9 @@ func (r *Recorder) getPipeline(req *livekit.StartRecordingRequest) (*pipeline.Pi
 	case *livekit.StartRecordingRequest_Rtmp:
 		return pipeline.NewRtmpPipeline(output.Rtmp.Urls, req.Options)
 	case *livekit.StartRecordingRequest_Filepath:
-		return pipeline.NewFilePipeline(r.filename, req.Options)
+		return pipeline.NewAppSinkPipeline(r.filename, req.Options)
+		// @todo need streaming upload case
+		//return pipeline.NewFilePipeline(r.filename, req.Options)
 	}
 	return nil, ErrNoOutput
 }

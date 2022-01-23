@@ -4,9 +4,15 @@
 package pipeline
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
+	"time"
+
+	"cloud.google.com/go/storage"
+	"github.com/tinyzimmer/go-gst/gst/app"
 
 	"github.com/livekit/protocol/livekit"
 	"github.com/livekit/protocol/logger"
@@ -20,6 +26,7 @@ var initialized = false
 type Pipeline struct {
 	pipeline *gst.Pipeline
 	output   *OutputBin
+	input    *InputBin
 	removed  map[string]bool
 
 	started chan struct{}
@@ -62,6 +69,25 @@ func NewFilePipeline(filename string, options *livekit.RecordingOptions) (*Pipel
 	return newPipeline(input, output)
 }
 
+func NewAppSinkPipeline(filename string, options *livekit.RecordingOptions) (*Pipeline, error) {
+	if !initialized {
+		gst.Init(nil)
+		initialized = true
+	}
+
+	input, err := newInputBin(false, options)
+	if err != nil {
+		return nil, err
+	}
+
+	output, err := newAppSinkOutputBin(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	return newPipeline(input, output)
+}
+
 func newPipeline(input *InputBin, output *OutputBin) (*Pipeline, error) {
 	// elements must be added to pipeline before linking
 	pipeline, err := gst.NewPipeline("pipeline")
@@ -90,6 +116,7 @@ func newPipeline(input *InputBin, output *OutputBin) (*Pipeline, error) {
 	return &Pipeline{
 		pipeline: pipeline,
 		output:   output,
+		input:    input,
 		removed:  make(map[string]bool),
 		started:  make(chan struct{}, 1),
 		closed:   make(chan struct{}),
@@ -97,6 +124,59 @@ func newPipeline(input *InputBin, output *OutputBin) (*Pipeline, error) {
 }
 
 func (p *Pipeline) Start() error {
+	bucket := "bucket-name-here"
+	object := "filename-here.mp4"
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		fmt.Errorf("storage.NewClient: %v", err)
+	}
+	defer client.Close()
+
+	ctx, cancel := context.WithTimeout(ctx, time.Second*60)
+	defer cancel()
+
+	// Upload an object with storage.Writer.
+	wc := client.Bucket(bucket).Object(object).NewWriter(ctx)
+	wc.ContentType = "video/mp4"
+	wc.ChunkSize = 0 // note retries are not supported for chunk size 0.
+
+	asink := p.output.appSink
+	queue := p.output.queue
+	asink.SyncStateWithParent()
+	asink.SetWaitOnEOS(false)
+	queue.Link(asink.Element)
+	p.input.mux.Link(queue)
+
+	asink.SetCallbacks(&app.SinkCallbacks{
+		EOSFunc: func(sink *app.Sink) {
+			// Signal the pipeline that we've completed EOS.
+			// (this should not be required, need to investigate)
+			// pipeline.GetPipelineBus().Post(gst.NewEOSMessage(appSink))
+		},
+		NewSampleFunc: func(sink *app.Sink) gst.FlowReturn {
+			// Pull the sample that triggered this callback
+			sample := sink.PullSample()
+			if sample == nil {
+				return gst.FlowEOS
+			}
+
+			// Retrieve the buffer from the sample
+			buffer := sample.GetBuffer()
+			if buffer == nil {
+				return gst.FlowError
+			}
+
+			fmt.Printf("Writing chunk\n")
+
+			if _, err = io.Copy(wc, buffer.Reader()); err != nil {
+				fmt.Errorf("io.Copy: %v", err)
+			}
+			fmt.Printf("%v uploaded to %v.\n", object, bucket)
+			return gst.FlowOK
+		},
+	})
+
 	loop := glib.NewMainLoop(glib.MainContextDefault(), false)
 	p.pipeline.GetPipelineBus().AddWatch(func(msg *gst.Message) bool {
 		switch msg.Type() {
@@ -104,6 +184,12 @@ func (p *Pipeline) Start() error {
 			logger.Debugw("EOS received")
 			_ = p.pipeline.BlockSetState(gst.StateNull)
 			logger.Debugw("pipeline stopped")
+
+			// Data can continue to be added to the file until the writer is closed.
+			if err := wc.Close(); err != nil {
+				fmt.Errorf("Writer.Close: %v", err)
+			}
+
 			loop.Quit()
 			return false
 		case gst.MessageError:
@@ -121,7 +207,7 @@ func (p *Pipeline) Start() error {
 	})
 
 	// start playing
-	err := p.pipeline.SetState(gst.StatePlaying)
+	err = p.pipeline.SetState(gst.StatePlaying)
 	if err != nil {
 		return err
 	}

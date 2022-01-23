@@ -117,6 +117,7 @@ func newInputBin(isStream bool, options *livekit.RecordingOptions) (*InputBin, e
 
 	// create mux
 	var mux *gst.Element
+
 	if isStream {
 		mux, err = gst.NewElement("flvmux")
 		if err != nil {
@@ -128,6 +129,10 @@ func newInputBin(isStream bool, options *livekit.RecordingOptions) (*InputBin, e
 		}
 	} else {
 		mux, err = gst.NewElement("mp4mux")
+		if err != nil {
+			return nil, err
+		}
+		err = mux.Set("streamable", true)
 		if err != nil {
 			return nil, err
 		}

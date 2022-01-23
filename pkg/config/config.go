@@ -50,10 +50,11 @@ type RedisConfig struct {
 }
 
 type FileOutput struct {
-	Local     bool          `yaml:"local"`
-	S3        *S3Config     `yaml:"s3"`
-	Azblob    *AzblobConfig `yaml:"azblob"`
-	GCPConfig *GCPConfig    `yaml:"gcp"`
+	Local           bool             `yaml:"local"`
+	S3              *S3Config        `yaml:"s3"`
+	Azblob          *AzblobConfig    `yaml:"azblob"`
+	GCPConfig       *GCPConfig       `yaml:"gcp"`
+	StreamingUpload *StreamingUpload `yaml:"streaming"`
 }
 
 type S3Config struct {
@@ -71,6 +72,10 @@ type AzblobConfig struct {
 }
 
 type GCPConfig struct {
+	Bucket string `yaml:"bucket"`
+}
+
+type StreamingUpload struct {
 	Bucket string `yaml:"bucket"`
 }
 

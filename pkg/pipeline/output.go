@@ -1,3 +1,4 @@
+//go:build !test
 // +build !test
 
 package pipeline
@@ -8,6 +9,7 @@ import (
 	"github.com/livekit/protocol/logger"
 	"github.com/livekit/protocol/utils"
 	"github.com/tinyzimmer/go-gst/gst"
+	"github.com/tinyzimmer/go-gst/gst/app"
 )
 
 type OutputBin struct {
@@ -20,6 +22,10 @@ type OutputBin struct {
 	// rtmp only
 	tee  *gst.Element
 	rtmp map[string]*RtmpOut
+
+	//streaming upload
+	appSink *app.Sink
+	queue   *gst.Element
 }
 
 type RtmpOut struct {
@@ -123,6 +129,45 @@ func createRtmpOut(url string) (*RtmpOut, error) {
 	return &RtmpOut{
 		queue: queue,
 		sink:  sink,
+	}, nil
+}
+
+func newAppSinkOutputBin(filename string) (*OutputBin, error) {
+	sink, err := app.NewAppSink()
+	if err != nil {
+		return nil, err
+	}
+
+	queue, err := gst.NewElement("queue")
+	if err != nil {
+		return nil, err
+	}
+	if err = queue.SetProperty("max-size-bytes", uint(1024*1024)); err != nil {
+		return nil, err
+	}
+	queue.SetProperty("flush-on-eos", true)
+	queue.SetProperty("max-size-buffers", 0)
+	queue.SetProperty("max-size-bytes", 0)
+
+	//create bin
+	bin := gst.NewBin("output")
+	bin.Add(queue)
+
+	if err = bin.Add(sink.Element); err != nil {
+		return nil, err
+	}
+
+	// add ghost pad
+	ghostPad := gst.NewGhostPad("sink", sink.GetStaticPad("sink"))
+	if !bin.AddPad(ghostPad.Pad) {
+		return nil, ErrGhostPadFailed
+	}
+
+	return &OutputBin{
+		isStream: false,
+		bin:      bin,
+		appSink:  sink,
+		queue:    queue,
 	}, nil
 }
 
