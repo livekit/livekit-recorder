@@ -34,7 +34,7 @@ RUN if [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys AA8E81B4331F7F50 && \
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 112695A0E562B32A && \
     echo 'Package: * \
-          Pin: release a=focal \
+          Pin: release a=eoan \
           Pin-Priority: 500 \
           \
           \
@@ -48,7 +48,7 @@ RUN if [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
           Pin-Priority: 700' >> /etc/apt/preferences.d/chromium.pref && \
     apt update && \
     apt install -y chromium \
-    else \
+    ; else \
     wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && \
     apt-get install -y ./google-chrome-stable_current_amd64.deb && \
     rm google-chrome-stable_current_amd64.deb \
