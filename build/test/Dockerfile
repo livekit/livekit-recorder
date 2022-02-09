@@ -13,23 +13,18 @@ RUN apt-get update && \
     golang \
     gstreamer1.0-pulseaudio \
     pulseaudio \
-    snap \
     unzip \
     wget \
     xvfb
 
 
-RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then ARCH=amd64; elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then ARCH=arm64v8; fi && \
+RUN if [ "$TARGETPLATFORM" = "linux/arm64" ]; then ARCH=arm64v8; else ARCH=amd64; fi && \
     wget https://github.com/aler9/rtsp-simple-server/releases/download/v0.17.6/rtsp-simple-server_v0.17.6_linux_${ARCH}.tar.gz && \
     tar -zxvf rtsp-simple-server_v0.17.6_linux_${ARCH}.tar.gz && \
     rm rtsp-simple-server_v0.17.6_linux_${ARCH}.tar.gz
 
 # install chrome
-RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
-    wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && \
-    apt-get install -y ./google-chrome-stable_current_amd64.deb && \
-    rm google-chrome-stable_current_amd64.deb \
-    ; elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
+RUN if [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
     apt remove chromium-browser chromium-browser-l10n chromium-codecs-ffmpeg-extra && \
     echo "deb http://deb.debian.org/debian buster main \
           deb http://deb.debian.org/debian buster-updates main \
@@ -53,6 +48,10 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
           Pin-Priority: 700' >> /etc/apt/preferences.d/chromium.pref && \
     apt update && \
     apt install -y chromium \
+    else \
+    wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && \
+    apt-get install -y ./google-chrome-stable_current_amd64.deb && \
+    rm google-chrome-stable_current_amd64.deb \
     ; fi
 
 # install chromedriver

@@ -30,11 +30,7 @@ RUN apt-get update && \
     xvfb
 
 # install chrome
-RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
-    wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && \
-    apt-get install -y ./google-chrome-stable_current_amd64.deb && \
-    rm google-chrome-stable_current_amd64.deb \
-    ; elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
+RUN if [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
     apt remove chromium-browser chromium-browser-l10n chromium-codecs-ffmpeg-extra && \
     echo "deb http://deb.debian.org/debian buster main \
           deb http://deb.debian.org/debian buster-updates main \
@@ -58,6 +54,10 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
           Pin-Priority: 700' >> /etc/apt/preferences.d/chromium.pref && \
     apt update && \
     apt install -y chromium \
+    ; else \
+    wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && \
+    apt-get install -y ./google-chrome-stable_current_amd64.deb && \
+    rm google-chrome-stable_current_amd64.deb \
     ; fi
 
 # install chromedriver
