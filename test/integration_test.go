@@ -216,7 +216,7 @@ func verify(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.Recor
 	requireInRange := func(actual string, min, max float64) {
 		v, err := strconv.ParseFloat(actual, 64)
 		require.NoError(t, err)
-		require.True(t, min <= v && v <= max, "min: %v, max: %v, actual: %v", min, max, v)
+		require.True(t, min < v && v < max, "min: %v, max: %v, actual: %v", min, max, v)
 	}
 
 	// check format info
@@ -226,7 +226,7 @@ func verify(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.Recor
 		require.NotEqual(t, 0, info.Format.Size)
 		require.NotNil(t, res.File)
 		require.NotEqual(t, int64(0), res.File.Duration)
-		requireInRange(info.Format.Duration, float64(res.File.Duration-2), float64(res.File.Duration+2))
+		requireInRange(info.Format.Duration, float64(res.File.Duration-1), float64(res.File.Duration+1))
 		require.Equal(t, "x264", info.Format.Tags.Encoder)
 	}
 	require.Equal(t, 100, info.Format.ProbeScore)
@@ -247,8 +247,7 @@ func verify(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.Recor
 
 			// bitrate
 			if !isStream && !isStatic {
-				expected := float64(req.Options.AudioBitrate * 1000)
-				requireInRange(stream.BitRate, expected*0.95, expected*1.15)
+				requireInRange(stream.BitRate, 0, float64(req.Options.AudioBitrate*1150))
 			}
 		case "video":
 			hasVideo = true
