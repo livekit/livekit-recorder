@@ -19,8 +19,6 @@ import (
 // gst.Init needs to be called before using gst but after gst package loads
 var initialized = false
 
-// if EOS fails to send after 10 seconds, kill the pipeline
-const eosDeadline = 10 * time.Second
 const pipelineSource = "pipeline"
 
 type Pipeline struct {

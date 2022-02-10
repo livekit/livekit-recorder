@@ -15,8 +15,11 @@ type Display struct {
 }
 
 func Launch(conf *config.Config, url string, opts *livekit.RecordingOptions, isTemplate bool) (*Display, error) {
+	startChan := make(chan struct{})
+	close(startChan)
+
 	return &Display{
-		startChan: make(chan struct{}),
+		startChan: startChan,
 		endChan:   make(chan struct{}),
 	}, nil
 }
