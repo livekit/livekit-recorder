@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/livekit/protocol/livekit"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/livekit/livekit-recorder/pkg/config"
@@ -217,7 +216,7 @@ func verify(t *testing.T, req *livekit.StartRecordingRequest, res *livekit.Recor
 	requireInRange := func(actual string, min, max float64) {
 		v, err := strconv.ParseFloat(actual, 64)
 		require.NoError(t, err)
-		assert.True(t, min <= v && v <= max, "min: %v, max: %v, actual: %v", min, max, v)
+		require.True(t, min <= v && v <= max, "min: %v, max: %v, actual: %v", min, max, v)
 	}
 
 	// check format info
