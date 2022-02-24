@@ -1,6 +1,4 @@
-import {
-  LocalParticipant, Participant, RemoteParticipant,
-} from 'livekit-client';
+import { Participant } from 'livekit-client';
 import {
   AudioRenderer, LiveKitRoom, ParticipantView, StageProps,
 } from 'livekit-react';
@@ -29,7 +27,9 @@ export default function GridPage({ interfaceStyle }: TemplateProps) {
         onConnected={onConnected}
         onLeave={stopRecording}
         stageRenderer={renderStage}
-        adaptiveVideo
+        connectOptions={{
+          adaptiveStream: true,
+        }}
       />
     </div>
   );
@@ -44,48 +44,64 @@ const renderStage: React.FC<StageProps> = ({ roomState }: StageProps) => {
 
   // select participants to display on first page, keeping ordering consistent if possible.
   useEffect(() => {
+    let numVisible = participants.length;
+    if (participants.length === 1) {
+      setGridClass(styles.grid1x1);
+    } else if (participants.length === 2) {
+      setGridClass(styles.grid2x1);
+    } else if (participants.length <= 4) {
+      setGridClass(styles.grid2x2);
+    } else if (participants.length <= 9) {
+      setGridClass(styles.grid3x3);
+    } else if (participants.length <= 16) {
+      setGridClass(styles.grid4x4);
+    } else {
+      setGridClass(styles.grid5x5);
+      numVisible = Math.min(numVisible, 25);
+    }
+
     // remove any participants that are no longer connected
     const newParticipants: Participant[] = [];
     visibleParticipants.forEach((p) => {
-      if (room?.participants.has(p.sid)) {
+      if (
+        room?.participants.has(p.sid)
+        || room?.localParticipant.sid === p.sid
+      ) {
         newParticipants.push(p);
       }
     });
 
-    // ensure active speaker is visible
-    room?.activeSpeakers.forEach((speaker) => {
-      if (newParticipants.includes(speaker) || speaker instanceof LocalParticipant) {
+    // ensure active speakers are all visible
+    room?.activeSpeakers?.forEach((speaker) => {
+      if (
+        newParticipants.includes(speaker)
+        || (speaker !== room?.localParticipant
+          && !room?.participants.has(speaker.sid))
+      ) {
         return;
       }
-      newParticipants.unshift(speaker);
+      // find a non-active speaker and switch
+      const idx = newParticipants.findIndex((p) => !p.isSpeaking);
+      if (idx >= 0) {
+        newParticipants[idx] = speaker;
+      } else {
+        newParticipants.push(speaker);
+      }
     });
 
-    for (let i = 0; i < participants.length; i += 1) {
-      const participant = participants[i];
-      if (participant instanceof RemoteParticipant && !newParticipants.includes(participant)) {
-        newParticipants.push(participants[i]);
+    // add other non speakers
+    for (const p of participants) {
+      if (newParticipants.length >= numVisible) {
+        break;
       }
-      // max of 3x3 grid
-      if (newParticipants.length > 9) {
-        return;
+      if (newParticipants.includes(p) || p.isSpeaking) {
+        continue;
       }
+      newParticipants.push(p);
     }
-    if (newParticipants.length >= 9) {
-      setGridClass(styles.grid3x3);
-      newParticipants.splice(9, newParticipants.length - 9);
-    } else if (newParticipants.length >= 6) {
-      setGridClass(styles.grid3x3);
-      // one empty row
-    } else if (newParticipants.length >= 4) {
-      setGridClass(styles.grid2x2);
-      newParticipants.splice(4, newParticipants.length - 4);
-    } else if (newParticipants.length === 3) {
-      setGridClass(styles.grid2x2);
-      // one empty spot
-    } else if (newParticipants.length === 2) {
-      setGridClass(styles.grid2x1);
-    } else if (newParticipants.length === 1) {
-      setGridClass(styles.grid1x1);
+
+    if (newParticipants.length > numVisible) {
+      newParticipants.splice(numVisible, newParticipants.length - numVisible);
     }
     setVisibleParticipants(newParticipants);
   }, [participants]);
@@ -95,7 +111,7 @@ const renderStage: React.FC<StageProps> = ({ roomState }: StageProps) => {
   }
 
   if (!room) {
-    return <div>room closed</div>;
+    return <div />;
   }
 
   if (visibleParticipants.length === 0) {
@@ -115,7 +131,6 @@ const renderStage: React.FC<StageProps> = ({ roomState }: StageProps) => {
           orientation="landscape"
           width="100%"
           height="100%"
-          adaptiveVideo
         />
       ))}
       {audioRenderers}

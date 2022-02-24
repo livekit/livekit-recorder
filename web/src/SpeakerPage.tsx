@@ -1,5 +1,5 @@
 import {
-  Participant, RemoteParticipant, RemoteVideoTrack, VideoQuality,
+  Participant, RemoteParticipant, RemoteVideoTrack,
 } from 'livekit-client';
 import {
   AudioRenderer, LiveKitRoom, ParticipantView, ScreenShareView, StageProps,
@@ -29,7 +29,9 @@ export default function SpeakerPage({ interfaceStyle }: TemplateProps) {
         onConnected={onConnected}
         onLeave={stopRecording}
         stageRenderer={renderStage}
-        adaptiveVideo
+        connectOptions={{
+          adaptiveStream: true,
+        }}
       />
     </div>
   );
@@ -45,7 +47,7 @@ const renderStage: React.FC<StageProps> = ({ roomState }: StageProps) => {
   }
 
   if (!room) {
-    return <div>room closed</div>;
+    return <div />;
   }
 
   // find first participant with screen shared
@@ -98,7 +100,6 @@ const renderStage: React.FC<StageProps> = ({ roomState }: StageProps) => {
         width="100%"
         height="100%"
         orientation="landscape"
-        quality={VideoQuality.HIGH}
       />
     );
   }
@@ -114,7 +115,6 @@ const renderStage: React.FC<StageProps> = ({ roomState }: StageProps) => {
             width="100%"
             height="100%"
             orientation="landscape"
-            adaptiveVideo
           />
         ))}
       </div>
