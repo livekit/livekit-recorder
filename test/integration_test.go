@@ -115,7 +115,7 @@ func testRecording(t *testing.T,
 }
 
 func testStream(t *testing.T, conf *config.Config) {
-	rtmpUrl := "rtmp://localhost:1935/stream1"
+	rtmpUrl := "rtmp://localhost:1935/live/stream1"
 	req := &livekit.StartRecordingRequest{
 		Input: &livekit.StartRecordingRequest_Url{
 			Url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
@@ -146,7 +146,7 @@ func testStream(t *testing.T, conf *config.Config) {
 	verifyStream(t, req, rtmpUrl)
 
 	// add another, check both
-	rtmpUrl2 := "rtmp://localhost:1935/stream2"
+	rtmpUrl2 := "rtmp://localhost:1935/live/stream2"
 	require.NoError(t, rec.AddOutput(rtmpUrl2))
 	verifyStream(t, req, rtmpUrl, rtmpUrl2)
 
