@@ -109,7 +109,7 @@ func createRtmpOut(url string) (*RtmpOut, error) {
 	}
 	queue.SetArg("leaky", "downstream")
 
-	sink, err := gst.NewElementWithName("rtmpsink", fmt.Sprintf("sink_%s", id))
+	sink, err := gst.NewElementWithName("rtmp2sink", fmt.Sprintf("sink_%s", id))
 	if err != nil {
 		return nil, err
 	}
