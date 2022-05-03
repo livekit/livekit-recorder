@@ -31,7 +31,7 @@ mkdir -p ~/livekit/recordings
 
 docker run --rm --name quick-demo \
     -e LIVEKIT_RECORDER_CONFIG="$(cat config.yaml)" \
-    -e RECORDING_REQUEST="$(cat basic.json)" \
+    -e RECORDING_REQUEST="$(cat request.json)" \
     -v ~/livekit/recordings:/out \
     livekit/livekit-recorder
 ```
