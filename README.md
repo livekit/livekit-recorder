@@ -1,3 +1,9 @@
+# Deprecated
+
+livekit-recorder has been deprecated in favor of [Egress](https://github.com/livekit/egress). Egress contains a superset of features as recorder.
+
+--------
+
 # LiveKit Recording
 
 All your live recording needs in one place.  
